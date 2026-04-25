@@ -33,7 +33,7 @@ export async function POST(
     }
 
     const result = createOffer(requestId, userId, parsed.data);
-    return NextResponse.json(result, { status: 201 });
+    return NextResponse.json(result);
   } catch (err) {
     const e = err as { status?: number; message?: string };
     return NextResponse.json(

@@ -120,7 +120,7 @@ export function seedCommunityDemo(): void {
   };
   store.action_plans.set(actionPlanRow.id, actionPlanRow);
 
-  // ── 6. Open helper request — zero offers ────────────────────────────────────
+  // ── 6. Open helper request for the smoke flow ───────────────────────────────
   const openRequest: HelperRequestRow = {
     id: HELPER_REQUEST_ID,
     case_id: CASE_ID,
@@ -137,7 +137,7 @@ export function seedCommunityDemo(): void {
     preferred_time: "Weekday evenings or weekends",
     skill_tags: ["macbook-repair", "ifixit", "display-cable"],
     safety_flags: [],
-    status: "helper_accepted",
+    status: "open",
     diagnosis_snapshot: {
       top_causes: diagnosisRow.top_causes,
       confidence: diagnosisRow.confidence,
@@ -159,10 +159,10 @@ export function seedCommunityDemo(): void {
       helper_request_template: actionPlanRow.helper_request_template,
       safety_preamble: actionPlanRow.safety_preamble,
     },
-    accepted_offer_id: OFFER_ID,
+    accepted_offer_id: null,
     expires_at: "2025-04-01T00:00:00.000Z",
     created_at: "2025-03-01T10:10:00.000Z",
-    updated_at: "2025-03-02T15:00:00.000Z",
+    updated_at: "2025-03-01T10:10:00.000Z",
   };
   store.helper_requests.set(HELPER_REQUEST_ID, openRequest);
 
@@ -182,8 +182,8 @@ export function seedCommunityDemo(): void {
   };
   store.helper_request_offers.set(SECOND_OFFER_ID, secondOffer);
 
-  // ── 8. Accepted offer ───────────────────────────────────────────────────────
-  const acceptedOffer: HelperRequestOfferRow = {
+  // ── 8. Fixed pending offer used by the smoke flow ───────────────────────────
+  const pendingOffer: HelperRequestOfferRow = {
     id: OFFER_ID,
     helper_request_id: HELPER_REQUEST_ID,
     helper_user_id: HELPER_USER_ID,
@@ -192,13 +192,13 @@ export function seedCommunityDemo(): void {
       "I've replaced display cables on several MacBook Pros. I have a spudger set and can meet you on campus this weekend.",
     availability: "Saturday or Sunday afternoon",
     skill_tags: ["macbook-repair", "display-cable"],
-    status: "accepted",
+    status: "pending",
     created_at: "2025-03-02T14:00:00.000Z",
-    updated_at: "2025-03-02T15:00:00.000Z",
+    updated_at: "2025-03-02T14:00:00.000Z",
   };
-  store.helper_request_offers.set(OFFER_ID, acceptedOffer);
+  store.helper_request_offers.set(OFFER_ID, pendingOffer);
 
-  // ── 9. Conversation with two messages ───────────────────────────────────────
+  // ── 9. Preallocated conversation with two messages ──────────────────────────
   const conversation: ConversationRow = {
     id: CONVERSATION_ID,
     case_id: CASE_ID,

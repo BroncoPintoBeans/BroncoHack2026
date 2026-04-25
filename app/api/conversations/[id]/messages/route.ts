@@ -87,7 +87,7 @@ export async function POST(
       parsed.data.client_id
     );
 
-    return NextResponse.json({ message }, { status: 201 });
+    return NextResponse.json({ message });
   } catch (err) {
     const e = err as { status?: number; message?: string };
     return NextResponse.json(

@@ -1,6 +1,8 @@
 #!/usr/bin/env tsx
 
-const BASE = "http://localhost:3000";
+const BASE =
+  process.env.COMMUNITY_REPAIR_BASE_URL?.replace(/\/$/, "") ??
+  "http://localhost:3000";
 const OWNER = "00000000-0000-4000-8000-000000000001";
 const HELPER = "00000000-0000-4000-8000-000000000002";
 const UNRELATED = "00000000-0000-4000-8000-000000000003";
@@ -55,6 +57,17 @@ async function patch(url: string, body: unknown, userId: string) {
 
 async function run() {
   console.log("🔥 Communal Repair smoke tests\n");
+
+  await check("0. Reset deterministic Communal Repair demo seed", async () => {
+    const { status, data } = await post(
+      "/api/dev/community-demo/seed",
+      {},
+      OWNER
+    );
+    if (status !== 200)
+      throw new Error(`Expected 200, got ${status}: ${JSON.stringify(data)}`);
+    if (data.seeded !== true) throw new Error("seeded flag missing");
+  });
 
   await check(
     "1. POST /api/cases/[id]/helper-request → 200, helper_request.id present",
@@ -195,8 +208,9 @@ async function run() {
     }
   );
 
-  const passed = results.filter((r) => r.passed).length;
-  console.log(`\nResults: ${passed}/${results.length} passed`);
+  const smokeResults = results.filter((r) => !r.name.startsWith("0."));
+  const passed = smokeResults.filter((r) => r.passed).length;
+  console.log(`\nResults: ${passed}/${smokeResults.length} passed`);
   if (results.some((r) => !r.passed)) process.exit(1);
 }
 
