@@ -84,6 +84,21 @@ We explicitly do **not** target Best Beginner, Best Hardware, Best Cybersecurity
 | Rerun | New run created on field-edit, manual-retry, or new-info; old runs preserved |
 | Demo fallback | "Load Demo Case" button replays a seeded `case_events` timeline on a timer |
 
+### 5.1a.2 User Journey After Photo Upload (four paths)
+
+Once a user uploads a photo of a broken item, they choose from four action paths before or after the AI verdict:
+
+| Path | Description |
+| :---- | :---- |
+| **1. Repair Verdict + Instructions** | Agent diagnoses the item, labels parts in the uploaded image, and returns step-by-step repair instructions (video or written). Powers the full Repair Verdict flow with RRR score and action plan. |
+| **2. Disassembly / Learning** | For users who want to understand the device without necessarily repairing it. Agent generates an instruction manual or tutorial covering what parts the item contains and how to analyze or disassemble them. |
+| **3. Auto-Marketplace Post** | Agent extracts product name, type, and make from the image and auto-drafts a "Repair Needed" or "For Sale" listing with an estimated price. Also surfaces similar listings from other sellers. User reviews and approves before publishing — no manual entry required. |
+| **4. Donate / Recycle** | If the user wants responsible disposal rather than repair or resale, the agent recommends nearby donation centers and e-waste recycling facilities appropriate to the item category. |
+
+These paths are presented as a choice immediately after photo upload so users are never forced into the full diagnosis flow if their intent is different.
+
+---
+
 ### 5.1b Campus Marketplace & Trading System (prototype built)
 
 The following features are fully built in the UI prototype (Next.js 16 / React 19 / Tailwind CSS v4 / TypeScript, designed from Figma file Q1U2pgxm0XqISBmUpGRe1g). These extend the repair desk into a full recirculation platform.
