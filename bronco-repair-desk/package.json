@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "smoke:community-repair": "tsx scripts/smoke-community-repair.ts"
+    "smoke:community-repair": "npx tsx scripts/smoke-community-repair.ts"
   },
   "dependencies": {
     "next": "16.2.4",
