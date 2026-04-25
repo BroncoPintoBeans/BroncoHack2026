@@ -97,7 +97,7 @@ export default function RewardsPage() {
               <span className="text-3xl">🏆</span>
               <div className="flex-1">
                 <p className="font-semibold text-white text-base">Campus Leaderboard</p>
-                <p className="text-white/70 text-sm">You're ranked #7 on campus this month!</p>
+                <p className="text-white/70 text-sm">You&apos;re ranked #7 on campus this month!</p>
               </div>
               <button className="bg-[#ffca98] text-[#7a532a] text-xs font-semibold tracking-[0.6px] px-4 py-2 rounded-lg">View All</button>
             </div>
