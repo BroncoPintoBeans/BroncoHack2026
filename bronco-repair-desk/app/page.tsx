@@ -1,202 +1,259 @@
+"use client";
+
 import Link from "next/link";
-import Navbar from "@/components/Navbar";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 
 const heroImg = "https://www.figma.com/api/mcp/asset/e9af5714-e133-4b76-8ce4-65f1b50a0c81";
-const mountainBikeImg = "https://www.figma.com/api/mcp/asset/c6424184-4d94-4a09-9abe-cafcc7192eb3";
-const miniFridgeImg = "https://www.figma.com/api/mcp/asset/bafd125c-7953-43f8-ba43-2ef65c090d7c";
 
-export default function LandingPage() {
+export default function SignInPage() {
+  const router = useRouter();
+  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [signUpSuccess, setSignUpSuccess] = useState(false);
+
+  async function handleSubmit(e: { preventDefault(): void }) {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+
+    const supabase = createClient();
+
+    if (mode === "signin") {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) {
+        setError(error.message);
+      } else {
+        router.push("/home");
+        router.refresh();
+      }
+    } else {
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { full_name: name },
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+      if (error) {
+        setError(error.message);
+      } else {
+        setSignUpSuccess(true);
+      }
+    }
+
+    setLoading(false);
+  }
+
   return (
-    <div className="min-h-screen bg-[#f9faf2]">
-      <Navbar />
-
-      {/* Hero */}
-      <section className="bg-[#f3f4ec] py-24">
-        <div className="max-w-[1280px] mx-auto px-6 grid grid-cols-2 gap-12 items-center" style={{ minHeight: 500 }}>
-          <div className="flex flex-col gap-4">
-            <h1 className="font-bold text-[#012d1d] text-[32px] leading-tight tracking-[-0.8px]">
-              Sustainable Campus Life, Made<br />Practical.
-            </h1>
-            <p className="text-[#414844] text-lg leading-relaxed max-w-[490px]">
-              Trade items with fellow students or get a repair verdict for your broken essentials. Save money and keep waste out of landfills.
-            </p>
-            <div className="flex gap-4 pt-2">
-              <Link
-                href="/create-listing"
-                className="flex items-center gap-2 bg-[#ffca98] text-[#7a532a] text-xs font-semibold tracking-[0.6px] px-6 py-3 rounded-lg hover:bg-[#f5b97a] transition-colors"
-              >
-                Sell or Trade an Item
-              </Link>
-              <Link
-                href="/repair/case-84920"
-                className="flex items-center gap-2 bg-[#1b4332] text-white text-xs font-semibold tracking-[0.6px] px-6 py-3 rounded-lg hover:bg-[#012d1d] transition-colors"
-              >
-                {`Check if It's Worth Repairing`}
-              </Link>
+    <div className="min-h-screen bg-[#f3f4ec] flex">
+      {/* Left — branding panel */}
+      <div className="hidden lg:flex flex-col justify-between w-1/2 bg-[#1b4332] p-12 relative overflow-hidden">
+        <div className="absolute inset-0 opacity-20">
+          <img src={heroImg} alt="" className="w-full h-full object-cover" />
+        </div>
+        <div className="relative z-10">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-[#ffca98] rounded-lg flex items-center justify-center">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                <path d="M3 15l4-4m0 0l2-6 6-2-2 6-6 2z" stroke="#7a532a" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
             </div>
-            <div className="flex gap-6 pt-4">
-              {["SAVE MONEY", "REDUCE WASTE", "TRUSTED REPAIR GUIDANCE"].map((label) => (
-                <div key={label} className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-[#1b4332] opacity-60" />
-                  <span className="text-[#414844] text-xs font-semibold tracking-[0.6px] uppercase">{label}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div className="rounded-2xl overflow-hidden shadow-[0px_4px_20px_0px_rgba(27,67,50,0.08)]" style={{ height: 500 }}>
-            <img src={heroImg} alt="Student repairing a bicycle" className="w-full h-full object-cover" />
+            <span className="font-bold text-white text-lg tracking-[-0.3px]">Bronco Repair Desk</span>
           </div>
         </div>
-      </section>
+        <div className="relative z-10 flex flex-col gap-6">
+          <h1 className="font-bold text-white text-[40px] leading-tight tracking-[-1px]">
+            Sustainable Campus Life,<br />Made Practical.
+          </h1>
+          <p className="text-white/80 text-lg leading-relaxed max-w-100">
+            Trade items with fellow students or get a repair verdict for your broken essentials. Save money, reduce waste.
+          </p>
 
-      {/* How it Works */}
-      <section className="max-w-[1280px] mx-auto px-6 py-24">
-        <h2 className="font-semibold text-[#012d1d] text-2xl text-center mb-10">How it Works</h2>
-        <div className="grid grid-cols-3 gap-8">
-          {[
-            { step: "1. Upload", desc: "Snap a photo and provide a brief description of the item or issue.", bg: "#c1ecd4" },
-            { step: "2. Match", desc: "Get a repair verdict or find interested buyers in the campus network.", bg: "#ffdcbd" },
-            { step: "3. Act", desc: "Complete the trade or follow the guided steps to fix your gear.", bg: "#e1e6c2" },
-          ].map((item) => (
-            <div key={item.step} className="bg-white rounded-xl p-6 flex flex-col items-center gap-4 shadow-[0px_4px_10px_rgba(27,67,50,0.08)]">
-              <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ backgroundColor: item.bg }}>
-                <div className="w-6 h-6 bg-[#1b4332] opacity-40 rounded" />
+          <div className="flex flex-col gap-3">
+            {[
+              { value: "500+", label: "Items Recirculated" },
+              { value: "2 Tons", label: "Waste Prevented" },
+              { value: "400+", label: "Students on Campus" },
+            ].map((stat) => (
+              <div key={stat.label} className="flex items-center gap-4">
+                <span className="font-bold text-[#ffca98] text-xl w-20">{stat.value}</span>
+                <span className="text-white/70 text-sm">{stat.label}</span>
               </div>
-              <h3 className="font-semibold text-[#1a1c18] text-xl">{item.step}</h3>
-              <p className="text-[#414844] text-base text-center leading-6">{item.desc}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Marketplace + Repair Verdict Bento */}
-      <section className="max-w-[1280px] mx-auto px-6 pb-24">
-        <div className="grid grid-cols-12 gap-8">
-          <div className="col-span-8 flex flex-col gap-4">
-            <div className="flex items-center justify-between">
-              <h2 className="font-semibold text-[#012d1d] text-2xl">Campus Marketplace</h2>
-              <Link href="/marketplace" className="text-[#1b4332] text-xs font-semibold tracking-[0.6px]">View All</Link>
-            </div>
-            <div className="grid grid-cols-2 gap-6">
-              <div className="bg-white rounded-xl overflow-hidden shadow-[0px_4px_20px_0px_rgba(27,67,50,0.08)]">
-                <div className="h-48 bg-[#e2e3db] relative overflow-hidden">
-                  <img src={mountainBikeImg} alt="Mountain Bike" className="w-full h-full object-cover" />
-                  <span className="absolute top-4 left-4 backdrop-blur-sm bg-white/90 text-[#012d1d] text-xs font-semibold tracking-[0.6px] px-3 py-1 rounded-full">Good Condition</span>
-                </div>
-                <div className="p-6">
-                  <h3 className="font-semibold text-[#1a1c18] text-xl mb-1">Mountain Bike</h3>
-                  <p className="text-[#414844] text-sm leading-[21px] mb-4">Slight rust on chain, otherwise rides smooth. Needs a new home.</p>
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold text-[#1b4332] text-2xl">$50</span>
-                    <Link href="/marketplace/mountain-bike" className="border border-[#717973] text-[#1a1c18] text-xs font-semibold tracking-[0.6px] px-4 py-2 rounded-lg hover:bg-[#f3f4ec] transition-colors">Details</Link>
-                  </div>
-                </div>
-              </div>
-              <div className="bg-white rounded-xl overflow-hidden shadow-[0px_4px_20px_0px_rgba(27,67,50,0.08)]">
-                <div className="h-48 bg-[#e2e3db] relative overflow-hidden">
-                  <img src={miniFridgeImg} alt="Mini Fridge" className="w-full h-full object-cover" />
-                  <span className="absolute top-4 left-4 bg-[#ffca98] text-[#7a532a] text-xs font-semibold tracking-[0.6px] px-3 py-1 rounded-full">Trade Only</span>
-                </div>
-                <div className="p-6">
-                  <h3 className="font-semibold text-[#1a1c18] text-xl mb-1">Mini Fridge</h3>
-                  <p className="text-[#414844] text-sm leading-[21px] mb-4">Works perfectly. Looking to trade for a decent desk lamp or plant.</p>
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold text-[#7d562d] text-2xl">Trade</span>
-                    <Link href="/marketplace/mini-fridge" className="border border-[#717973] text-[#1a1c18] text-xs font-semibold tracking-[0.6px] px-4 py-2 rounded-lg hover:bg-[#f3f4ec] transition-colors">Details</Link>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="col-span-4 flex flex-col gap-4">
-            <h2 className="font-semibold text-[#012d1d] text-2xl">Repair Verdict</h2>
-            <div className="bg-white rounded-xl p-6 shadow-[0px_4px_10px_rgba(27,67,50,0.08)] flex flex-col gap-6">
-              <div className="flex items-center gap-3 pb-4 border-b border-[#c1c8c2]">
-                <div className="w-12 h-12 bg-[#e8e9e1] rounded-lg flex items-center justify-center">
-                  <svg width="24" height="17" viewBox="0 0 24 17" fill="none"><rect x="2" y="1" width="20" height="13" rx="2" stroke="#1a1c18" strokeWidth="1.5"/><path d="M8 16h8" stroke="#1a1c18" strokeWidth="1.5" strokeLinecap="round"/></svg>
-                </div>
-                <div>
-                  <p className="font-semibold text-[#1a1c18] text-xl">MacBook Pro 2019</p>
-                  <p className="text-[#414844] text-sm">Screen flicker issue</p>
-                </div>
-              </div>
-              <div className="flex flex-col gap-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-[#414844] text-base">Repairability Score</span>
-                  <span className="font-semibold text-[#012d1d] text-xl">75%</span>
-                </div>
-                <div className="bg-[#e2e3db] h-2 rounded-full"><div className="bg-[#1b4332] h-2 rounded-full w-3/4" /></div>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-[#414844] text-base">Estimated Cost</span>
-                <span className="font-semibold text-[#1a1c18] text-2xl">$15</span>
-              </div>
-              <div className="flex flex-col gap-4 pt-4">
-                <div className="bg-[rgba(193,236,212,0.3)] border border-[#c1ecd4] rounded-lg p-3 flex items-center gap-2">
-                  <svg width="17" height="17" viewBox="0 0 17 17" fill="none"><circle cx="8.5" cy="8.5" r="7.5" stroke="#274e3d" strokeWidth="1.5"/><path d="M5.5 8.5l2 2 4-4" stroke="#274e3d" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                  <span className="font-semibold text-[#274e3d] text-xs tracking-[0.6px]">Recommended: Repair</span>
-                </div>
-                <Link href="/repair/case-84920" className="bg-[#1b4332] text-white text-xs font-semibold tracking-[0.6px] px-4 py-3 rounded-lg text-center hover:bg-[#012d1d] transition-colors">View Repair Guide</Link>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Impact & Categories */}
-      <section className="max-w-[1280px] mx-auto px-6 pb-24">
-        <div className="grid grid-cols-2 gap-12">
-          <div className="flex flex-col gap-4">
-            <h2 className="font-semibold text-[#012d1d] text-2xl">Our Campus Impact</h2>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-[#1b4332] rounded-xl p-6 flex flex-col gap-2 shadow-[0px_4px_10px_rgba(27,67,50,0.08)]">
-                <p className="font-bold text-white text-3xl">500+</p>
-                <p className="text-white/90 text-sm pb-2">Items Recirculated</p>
-                <div className="border-t border-white/20 pt-4 flex items-center gap-2">
-                  <div className="w-2.5 h-2.5 bg-white/70 rounded-full" />
-                  <span className="font-semibold text-white text-xs tracking-[0.6px] uppercase">Active Network</span>
-                </div>
-              </div>
-              <div className="bg-[#e2e3db] rounded-xl p-6 flex flex-col gap-2 shadow-[0px_4px_10px_rgba(27,67,50,0.08)]">
-                <p className="font-bold text-[#1b4332] text-3xl">2 Tons</p>
-                <p className="text-[#414844] text-sm pb-2">Waste Prevented</p>
-                <div className="border-t border-[#c1c8c2] pt-4 flex items-center gap-2">
-                  <div className="w-2.5 h-2.5 bg-[#1b4332]/60 rounded-full" />
-                  <span className="font-semibold text-[#1b4332] text-xs tracking-[0.6px] uppercase">CO2 Saved</span>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="flex flex-col gap-4">
-            <h2 className="font-semibold text-[#012d1d] text-2xl">Browse Categories</h2>
-            <div className="grid grid-cols-4 gap-4">
-              {[
-                { label: "Laptops", emoji: "💻" },
-                { label: "Bicycles", emoji: "🚲" },
-                { label: "E-Scooters", emoji: "🛴" },
-                { label: "Appliances", emoji: "🔌" },
-              ].map((cat) => (
-                <Link key={cat.label} href="/marketplace" className="bg-white rounded-xl p-4 flex flex-col items-center gap-2 shadow-[0px_4px_10px_rgba(27,67,50,0.08)] hover:shadow-[0px_4px_16px_rgba(27,67,50,0.14)] transition-shadow">
-                  <span className="text-3xl">{cat.emoji}</span>
-                  <span className="font-semibold text-[#1a1c18] text-xs tracking-[0.6px]">{cat.label}</span>
-                </Link>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="bg-[#f8f9f1] border-t border-[#e5e7eb] py-12 mt-auto">
-        <div className="max-w-[1280px] mx-auto px-6 flex items-center justify-between">
-          <p className="font-bold text-[#1b4332] text-sm">© 2024 Bronco Repair Desk. Built for Campus Sustainability.</p>
-          <div className="flex items-center gap-4">
-            {["Terms of Service", "Privacy Policy", "Campus Map", "Repair Partners"].map((link, i) => (
-              <a key={link} href="#" className={`text-sm ${i === 0 ? "text-[#1b4332] underline" : "text-[#6b7280]"}`}>{link}</a>
             ))}
           </div>
         </div>
-      </footer>
+        <div className="relative z-10">
+          <p className="text-white/40 text-xs">© 2024 Bronco Repair Desk</p>
+        </div>
+      </div>
+
+      {/* Right — auth form */}
+      <div className="flex-1 flex flex-col items-center justify-center px-6 py-12">
+        {/* Mobile logo */}
+        <div className="lg:hidden flex items-center gap-3 mb-10">
+          <div className="w-8 h-8 bg-[#1b4332] rounded-lg flex items-center justify-center">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <path d="M3 15l4-4m0 0l2-6 6-2-2 6-6 2z" stroke="#ffca98" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </div>
+          <span className="font-bold text-[#012d1d] text-lg tracking-[-0.3px]">Bronco Repair Desk</span>
+        </div>
+
+        <div className="w-full max-w-100 flex flex-col gap-8">
+          {signUpSuccess ? (
+            <div className="flex flex-col gap-4 text-center">
+              <div className="w-16 h-16 bg-[#c1ecd4] rounded-full flex items-center justify-center mx-auto">
+                <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+                  <circle cx="14" cy="14" r="13" stroke="#274e3d" strokeWidth="1.5"/>
+                  <path d="M8 14l4 4 8-8" stroke="#274e3d" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </div>
+              <h2 className="font-bold text-[#012d1d] text-2xl tracking-[-0.5px]">Check your email</h2>
+              <p className="text-[#414844] text-sm leading-relaxed">
+                We sent a confirmation link to <span className="font-semibold text-[#1a1c18]">{email}</span>. Click it to activate your account.
+              </p>
+              <button
+                onClick={() => { setSignUpSuccess(false); setMode("signin"); }}
+                className="text-[#1b4332] text-xs font-semibold hover:underline"
+              >
+                Back to sign in
+              </button>
+            </div>
+          ) : (
+            <>
+              {/* Heading */}
+              <div className="flex flex-col gap-1">
+                <h2 className="font-bold text-[#012d1d] text-[28px] tracking-[-0.6px]">
+                  {mode === "signin" ? "Welcome back" : "Create your account"}
+                </h2>
+                <p className="text-[#414844] text-sm">
+                  {mode === "signin"
+                    ? "Sign in to your Bronco Repair Desk account."
+                    : "Join the campus sustainability network."}
+                </p>
+              </div>
+
+              {/* Tab toggle */}
+              <div className="flex bg-[#e8e9e1] rounded-lg p-1 gap-1">
+                {(["signin", "signup"] as const).map((m) => (
+                  <button
+                    key={m}
+                    onClick={() => { setMode(m); setError(null); }}
+                    className={`flex-1 py-2 rounded-md text-xs font-semibold tracking-[0.4px] transition-all ${
+                      mode === m
+                        ? "bg-white text-[#012d1d] shadow-sm"
+                        : "text-[#717973] hover:text-[#414844]"
+                    }`}
+                  >
+                    {m === "signin" ? "Sign In" : "Sign Up"}
+                  </button>
+                ))}
+              </div>
+
+              {/* Error banner */}
+              {error && (
+                <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 flex items-start gap-2">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="mt-0.5 shrink-0">
+                    <circle cx="8" cy="8" r="7" stroke="#ef4444" strokeWidth="1.5"/>
+                    <path d="M8 5v3M8 11v.5" stroke="#ef4444" strokeWidth="1.5" strokeLinecap="round"/>
+                  </svg>
+                  <p className="text-red-700 text-xs leading-relaxed">{error}</p>
+                </div>
+              )}
+
+              {/* Form */}
+              <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                {mode === "signup" && (
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[#1a1c18] text-xs font-semibold tracking-[0.4px]">Full Name</label>
+                    <input
+                      type="text"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="Jane Doe"
+                      required
+                      className="bg-white border border-[#c1c8c2] rounded-lg px-4 py-3 text-[#1a1c18] text-sm placeholder-[#9ca3a0] focus:outline-none focus:border-[#1b4332] focus:ring-2 focus:ring-[#1b4332]/10 transition-all"
+                    />
+                  </div>
+                )}
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[#1a1c18] text-xs font-semibold tracking-[0.4px]">Campus Email</label>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="you@university.edu"
+                    required
+                    className="bg-white border border-[#c1c8c2] rounded-lg px-4 py-3 text-[#1a1c18] text-sm placeholder-[#9ca3a0] focus:outline-none focus:border-[#1b4332] focus:ring-2 focus:ring-[#1b4332]/10 transition-all"
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[#1a1c18] text-xs font-semibold tracking-[0.4px]">Password</label>
+                    {mode === "signin" && (
+                      <a href="#" className="text-[#1b4332] text-xs font-semibold hover:underline">Forgot password?</a>
+                    )}
+                  </div>
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    required
+                    minLength={6}
+                    className="bg-white border border-[#c1c8c2] rounded-lg px-4 py-3 text-[#1a1c18] text-sm placeholder-[#9ca3a0] focus:outline-none focus:border-[#1b4332] focus:ring-2 focus:ring-[#1b4332]/10 transition-all"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="mt-2 bg-[#1b4332] text-white text-xs font-semibold tracking-[0.6px] px-6 py-3.5 rounded-lg hover:bg-[#012d1d] transition-colors shadow-[0px_4px_12px_rgba(27,67,50,0.25)] disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {loading
+                    ? "Please wait…"
+                    : mode === "signin"
+                    ? "Sign In"
+                    : "Create Account"}
+                </button>
+              </form>
+
+              {/* Divider */}
+              <div className="flex items-center gap-3">
+                <div className="flex-1 h-px bg-[#c1c8c2]" />
+                <span className="text-[#717973] text-xs">or</span>
+                <div className="flex-1 h-px bg-[#c1c8c2]" />
+              </div>
+
+              {/* Guest link */}
+              <Link
+                href="/home"
+                className="text-center border border-[#c1c8c2] bg-white text-[#1a1c18] text-xs font-semibold tracking-[0.4px] px-6 py-3.5 rounded-lg hover:bg-[#f3f4ec] transition-colors"
+              >
+                Browse as Guest
+              </Link>
+
+              {/* Switch mode */}
+              <p className="text-center text-[#717973] text-xs">
+                {mode === "signin" ? "Don't have an account?" : "Already have an account?"}{" "}
+                <button
+                  onClick={() => { setMode(mode === "signin" ? "signup" : "signin"); setError(null); }}
+                  className="text-[#1b4332] font-semibold hover:underline"
+                >
+                  {mode === "signin" ? "Sign up" : "Sign in"}
+                </button>
+              </p>
+            </>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
