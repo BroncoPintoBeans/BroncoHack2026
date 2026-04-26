@@ -18,6 +18,7 @@ function dbRowToRunRecord(row: unknown): CaseRunRecord {
     currentPhase: parsed.current_phase as AgentPhase,
     nextPhase: parsed.next_phase ?? undefined,
     awaitingQuestion: parsed.awaiting_question ?? undefined,
+    awaitingOptions: parsed.awaiting_options ?? undefined,
     followupCount: parsed.followup_count,
     triggerReason: parsed.trigger_reason,
     startedAt: parsed.created_at,
@@ -132,7 +133,7 @@ export async function getRun(runId: string): Promise<CaseRunRecord | null> {
 
 export async function updateRun(
   runId: string,
-  data: Partial<Pick<CaseRunRecord, 'status' | 'currentPhase' | 'nextPhase' | 'awaitingQuestion' | 'followupCount'>>,
+  data: Partial<Pick<CaseRunRecord, 'status' | 'currentPhase' | 'nextPhase' | 'awaitingQuestion' | 'awaitingOptions' | 'followupCount'>>,
 ): Promise<CaseRunRecord> {
   if (isSupabaseAvailable()) {
     const patch: Record<string, unknown> = {}
@@ -140,6 +141,7 @@ export async function updateRun(
     if (data.currentPhase !== undefined) patch.current_phase = data.currentPhase
     if (data.nextPhase !== undefined) patch.next_phase = data.nextPhase
     if (data.awaitingQuestion !== undefined) patch.awaiting_question = data.awaitingQuestion
+    if (data.awaitingOptions !== undefined) patch.awaiting_options = data.awaitingOptions
     if (data.followupCount !== undefined) patch.followup_count = data.followupCount
     const { data: row, error } = await getSupabaseClient()
       .from('case_runs')

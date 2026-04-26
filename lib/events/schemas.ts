@@ -25,6 +25,7 @@ export const DiagnosisAwaitingUserPayloadSchema = z.object({
   question: z.string().min(1),
   reason: z.string().min(1),
   awaitingUser: z.literal(true),
+  options: z.array(z.string().min(1).max(60)).min(2).max(5),
 })
 
 export const DiagnosisPayloadSchema = z.discriminatedUnion('awaitingUser', [

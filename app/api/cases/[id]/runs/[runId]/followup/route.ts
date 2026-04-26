@@ -10,7 +10,7 @@ import { writeDiagnosis, writeVerdict, writeActionPlan, writeHelperRequest } fro
 import { insertEvent } from '@/lib/db/queries/events'
 
 const FollowupBodySchema = z.object({
-  answer: z.string().trim().min(1).max(8_000),
+  answer: z.string().trim().min(1).max(200),
 })
 
 export async function POST(
@@ -54,6 +54,19 @@ export async function POST(
   const parsed = FollowupBodySchema.safeParse(body)
   if (!parsed.success) {
     return Response.json({ error: parsed.error.flatten() }, { status: 422 })
+  }
+
+  // Enforce constrained options: reject free-text answers that aren't in the allowed set
+  const allowedOptions = runRecord.awaitingOptions
+  if (allowedOptions && allowedOptions.length > 0) {
+    const normalised = parsed.data.answer.trim().toLowerCase()
+    const isAllowed = allowedOptions.some((opt) => opt.trim().toLowerCase() === normalised)
+    if (!isAllowed) {
+      return Response.json(
+        { error: 'Answer must be one of the provided options', options: allowedOptions },
+        { status: 422 },
+      )
+    }
   }
 
   const releaseLock = await acquireCaseLock(parsedId.value)

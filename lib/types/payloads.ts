@@ -19,6 +19,8 @@ export interface DiagnosisAwaitingUserPayload {
   question: string
   reason: string
   awaitingUser: true
+  /** 2–5 short clickable answer options (no free text, prevents prompt injection) */
+  options: string[]
 }
 
 export type DiagnosisPayload = DiagnosisCompletePayload | DiagnosisAwaitingUserPayload

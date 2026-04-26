@@ -16,3 +16,12 @@ body {
 h1, h2, h3, h4, h5, h6 {
   font-family: 'Manrope', sans-serif;
 }
+
+@keyframes billy-fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.billy-text-enter {
+  animation: billy-fade-in 0.35s ease forwards;
+}

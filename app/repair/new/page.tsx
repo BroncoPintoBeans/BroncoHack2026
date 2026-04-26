@@ -4,8 +4,21 @@ import { useState, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Navbar from '@/components/Navbar'
-import { createCase } from '@/lib/api/client'
+import { BroncoAssistant } from '@/components/BroncoAssistant'
+import { createCase, createMedia, startRun } from '@/lib/api/client'
 import type { CaseCategory, Urgency } from '@/lib/types/agents'
+
+const MAX_MEDIA = 3
+const MAX_FILE_BYTES = 8 * 1024 * 1024 // 8 MB
+
+function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result as string)
+    reader.onerror = () => reject(new Error('Failed to read file'))
+    reader.readAsDataURL(file)
+  })
+}
 
 const CATEGORIES: { value: CaseCategory; label: string; emoji: string }[] = [
   { value: 'laptop', label: 'Laptop', emoji: '💻' },
@@ -27,14 +40,36 @@ export default function NewRepairPage() {
   const [urgency, setUrgency] = useState<Urgency>('normal')
   const [modelNumber, setModelNumber] = useState('')
   const [quoteStr, setQuoteStr] = useState('')
+  const [mediaFiles, setMediaFiles] = useState<File[]>([])
   const [submitting, setSubmitting] = useState(false)
+  const [submitPhase, setSubmitPhase] = useState<'idle' | 'creating' | 'uploading' | 'starting'>('idle')
   const [error, setError] = useState<string | null>(null)
+  const symptomsLength = symptoms.length
+
+  function handleMediaChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const picked = Array.from(e.target.files ?? [])
+    const oversized = picked.filter((f) => f.size > MAX_FILE_BYTES)
+    if (oversized.length) {
+      setError(`Each photo must be under 8 MB. "${oversized[0].name}" is too large.`)
+      e.target.value = ''
+      return
+    }
+    const combined = [...mediaFiles, ...picked].slice(0, MAX_MEDIA)
+    setMediaFiles(combined)
+    setError(null)
+    e.target.value = ''
+  }
+
+  function removeMedia(idx: number) {
+    setMediaFiles((prev) => prev.filter((_, i) => i !== idx))
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     if (!symptoms.trim()) return
 
     setSubmitting(true)
+    setSubmitPhase('creating')
     setError(null)
 
     try {
@@ -50,12 +85,32 @@ export default function NewRepairPage() {
         ...(quoteCents != null && !isNaN(quoteCents) ? { quoteCents } : {}),
       })
 
+      // Upload media files (if any) as data URLs
+      if (mediaFiles.length > 0) {
+        setSubmitPhase('uploading')
+        for (const file of mediaFiles) {
+          const dataUrl = await fileToDataUrl(file)
+          await createMedia(newCase.id, { url: dataUrl, mediaType: 'image' })
+        }
+      }
+
+      // Kick off the analysis run before redirecting
+      setSubmitPhase('starting')
+      await startRun(newCase.id)
+
       router.push(`/repair/${newCase.id}`)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create case. Please try again.')
       setSubmitting(false)
+      setSubmitPhase('idle')
     }
   }
+
+  const submitLabel =
+    submitPhase === 'creating' ? 'Creating Case…'
+    : submitPhase === 'uploading' ? `Uploading Photos (${mediaFiles.length})…`
+    : submitPhase === 'starting' ? 'Starting Analysis…'
+    : 'Get Repair Verdict →'
 
   return (
     <div className="min-h-screen bg-[#f9faf2]">
@@ -66,6 +121,28 @@ export default function NewRepairPage() {
           <Link href="/dashboard" className="text-[#1b4332] text-sm font-semibold hover:underline w-fit">← Back to Dashboard</Link>
           <h1 className="font-bold text-[#012d1d] text-[32px] tracking-[-0.64px]">New Repair Case</h1>
           <p className="text-[#414844] text-lg">Describe your broken item and our AI will assess whether it&apos;s worth repairing.</p>
+        </div>
+
+        {/* Billy welcome card */}
+        <div className="bg-white border border-[#e2e3db] rounded-xl px-5 py-3 flex items-center justify-between shadow-[0px_4px_10px_rgba(27,67,50,0.04)]">
+          <BroncoAssistant
+            runStatus={submitting ? "running" : undefined}
+            currentPhase={
+              submitting && submitPhase === 'uploading' ? 'intake'
+              : submitting && submitPhase === 'starting' ? 'orchestrator'
+              : undefined
+            }
+          />
+          <div className="flex flex-col items-end gap-0.5 pr-2">
+            <span className="font-semibold text-[#1a1c18] text-sm">Billy Bronco</span>
+            <span className="text-[#717973] text-xs">
+              {symptomsLength > 20
+                ? 'Great detail — more is better!'
+                : symptomsLength > 0
+                  ? 'Keep going...'
+                  : 'Tell me what\'s broken'}
+            </span>
+          </div>
         </div>
 
         {/* Form */}
@@ -164,6 +241,57 @@ export default function NewRepairPage() {
             </div>
           </div>
 
+          {/* Photo Upload */}
+          <div className="flex flex-col gap-3">
+            <label className="font-semibold text-[#1a1c18] text-sm tracking-[0.4px] uppercase">
+              Photos{' '}
+              <span className="text-[#717973] font-normal normal-case">(optional, up to {MAX_MEDIA})</span>
+            </label>
+            <div className="flex flex-wrap gap-3">
+              {mediaFiles.map((file, idx) => (
+                <div
+                  key={`${file.name}-${idx}`}
+                  className="relative w-24 h-24 rounded-xl border border-[#e2e3db] overflow-hidden bg-[#f3f4ec] group"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={URL.createObjectURL(file)}
+                    alt={file.name}
+                    className="w-full h-full object-cover"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeMedia(idx)}
+                    className="absolute top-1 right-1 w-5 h-5 rounded-full bg-[#1a1c18]/70 text-white text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    aria-label="Remove photo"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+              {mediaFiles.length < MAX_MEDIA && (
+                <label className="w-24 h-24 rounded-xl border-2 border-dashed border-[#c1c8c2] bg-white hover:border-[#1b4332] hover:bg-[#f3f4ec] cursor-pointer flex flex-col items-center justify-center gap-1 transition-colors">
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                    <path d="M10 4v12M4 10h12" stroke="#717973" strokeWidth="1.5" strokeLinecap="round"/>
+                  </svg>
+                  <span className="text-[#717973] text-xs text-center leading-tight px-1">Add Photo</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={handleMediaChange}
+                    className="sr-only"
+                  />
+                </label>
+              )}
+            </div>
+            {mediaFiles.length > 0 && (
+              <p className="text-[#717973] text-xs">
+                {mediaFiles.length}/{MAX_MEDIA} photo{mediaFiles.length !== 1 ? 's' : ''} selected
+              </p>
+            )}
+          </div>
+
           {/* Error */}
           {error && (
             <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-red-700 text-sm">
@@ -183,10 +311,10 @@ export default function NewRepairPage() {
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                 </svg>
-                Creating Case…
+                {submitLabel}
               </>
             ) : (
-              'Get Repair Verdict →'
+              submitLabel
             )}
           </button>
         </form>

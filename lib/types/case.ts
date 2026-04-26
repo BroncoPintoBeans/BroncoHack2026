@@ -30,6 +30,8 @@ export interface CaseRunRecord {
   currentPhase: AgentPhase
   nextPhase?: AgentPhase
   awaitingQuestion?: string
+  /** Constrained answer choices the user must pick from (prevents free-text prompt injection) */
+  awaitingOptions?: string[]
   followupCount: number
   triggerReason: 'initial' | 'manual_retry' | 'field_edit' | 'new_info'
   startedAt: string

@@ -1,14 +1,16 @@
 "use client";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { useEffect, useRef } from "react";
 import { useCaseRun } from "@/hooks/useCaseRun";
 import { useFollowUp } from "@/hooks/useFollowUp";
+import { startRun } from "@/lib/api/client";
+import { BroncoAssistant } from "@/components/BroncoAssistant";
 import type { CaseEventRecord } from "@/lib/types/case";
 import type { AgentPhase } from "@/lib/types/agents";
 import type { RrrBreakdown } from "@/lib/types/payloads";
 
 const macbookImg = "https://www.figma.com/api/mcp/asset/28faa150-d788-4f69-9b8c-8183d40e0a95";
-const macbookDetailImg = "https://www.figma.com/api/mcp/asset/0589ea48-6685-4c4a-b4ce-b2fb659caab5";
 
 type AgentDisplayStatus = "COMPLETE" | "ANALYZING" | "WAITING" | "FAILED" | "QUEUED";
 
@@ -117,6 +119,21 @@ export default function RepairWorkspacePage() {
   const runId = snapshot?.currentRun?.id ?? "";
   const followUp = useFollowUp(id, runId);
 
+  // Auto-trigger a run when the case is open with no active run yet
+  const hasStartedRef = useRef(false);
+  useEffect(() => {
+    if (hasStartedRef.current) return;
+    if (!snapshot) return;
+    const caseStatus = snapshot.case.status;
+    const currentRunStatus = snapshot.currentRun?.status;
+    if (caseStatus === "open" && !currentRunStatus) {
+      hasStartedRef.current = true;
+      startRun(id).catch(() => {
+        // ignore 409 (already active) and other transient errors; polling will pick up state
+      });
+    }
+  }, [snapshot, id]);
+
   const runStatus = snapshot?.currentRun?.status;
   const isComplete = runStatus === "complete";
   const isAwaitingUser = runStatus === "awaiting_user";
@@ -204,48 +221,72 @@ export default function RepairWorkspacePage() {
         {/* Follow-up card — only shown when awaiting_user */}
         {isAwaitingUser && (
           <div className="flex flex-col gap-3">
-            <h3 className="font-semibold text-[#1a1c18] text-base px-2">Evidence Gathering</h3>
+            <h3 className="font-semibold text-[#1a1c18] text-base px-2">Billy needs a little more info</h3>
             <div className="bg-white border border-[#e2e3db] rounded-xl shadow-[0px_4px_10px_rgba(27,67,50,0.04)] overflow-hidden">
-              <div className="bg-[#f3f4ec] p-6 flex items-start justify-between gap-6">
-                <div className="flex flex-col gap-3 flex-1">
-                  <div className="flex items-center gap-2">
-                    <svg width="17" height="17" viewBox="0 0 17 17" fill="none"><circle cx="8.5" cy="8.5" r="7.5" stroke="#012d1d" strokeWidth="1.5"/><path d="M8.5 5.5v4M8.5 11h.01" stroke="#012d1d" strokeWidth="1.5" strokeLinecap="round"/></svg>
-                    <span className="text-[#012d1d] text-base tracking-[0.8px] uppercase font-normal">Follow-Up Question</span>
+              {/* Header with Billy + question */}
+              <div className="bg-[#f3f4ec] px-6 pt-5 pb-4 flex items-end gap-4">
+                <BroncoAssistant
+                  runStatus="awaiting_user"
+                  currentPhase={snapshot?.currentRun?.currentPhase}
+                  className="shrink-0"
+                />
+                <div className="flex flex-col gap-2 pb-2 flex-1">
+                  <div className="flex items-center gap-1.5">
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" stroke="#012d1d" strokeWidth="1.3"/><path d="M7 4.5v3M7 9h.01" stroke="#012d1d" strokeWidth="1.3" strokeLinecap="round"/></svg>
+                    <span className="text-[#012d1d] text-xs tracking-[0.7px] uppercase">Diagnosis Agent Question</span>
                   </div>
-                  <h4 className="font-semibold text-[#1a1c18] text-base leading-snug">
+                  <p className="font-semibold text-[#1a1c18] text-base leading-snug">
                     {snapshot?.currentRun?.awaitingQuestion ?? "Please provide more information."}
-                  </h4>
-                  <p className="text-[#414844] text-base leading-6">The Diagnosis Agent needs this to confirm the issue.</p>
-                </div>
-                <div className="w-32 h-32 border border-[#c1c8c2] rounded-lg overflow-hidden shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)] shrink-0">
-                  <img src={macbookDetailImg} alt="Case detail" className="w-full h-full object-cover" />
+                  </p>
+                  <p className="text-[#717973] text-sm">Tap an answer below — no free text to keep things safe and fast.</p>
                 </div>
               </div>
-              <div className="px-6 py-5 flex gap-3">
-                <button
-                  disabled={followUp.isSubmitting}
-                  onClick={() => followUp.submit("yes")}
-                  className="bg-[#012d1d] text-white text-base px-6 h-10 rounded-lg hover:bg-[#1b4332] transition-colors disabled:opacity-50"
-                >Yes</button>
-                <button
-                  disabled={followUp.isSubmitting}
-                  onClick={() => followUp.submit("no")}
-                  className="bg-[#e2e3db] text-[#1a1c18] text-base px-6 h-10 rounded-lg hover:bg-[#d2d3cb] transition-colors disabled:opacity-50"
-                >No</button>
-                <button
-                  disabled={followUp.isSubmitting}
-                  onClick={() => followUp.submit("intermittent")}
-                  className="bg-[#e2e3db] text-[#1a1c18] text-base px-6 h-10 rounded-lg hover:bg-[#d2d3cb] transition-colors disabled:opacity-50"
-                >Intermittent</button>
+
+              {/* Constrained answer options */}
+              <div className="px-6 py-5 flex flex-wrap gap-3">
+                {(snapshot?.currentRun?.awaitingOptions ?? ["Yes", "No", "Not sure"]).map((option) => (
+                  <button
+                    key={option}
+                    disabled={followUp.isSubmitting}
+                    onClick={() => followUp.submit(option)}
+                    className="group relative bg-white border-2 border-[#e2e3db] text-[#1a1c18] text-sm font-medium px-5 h-11 rounded-xl hover:border-[#012d1d] hover:bg-[#f3f4ec] hover:text-[#012d1d] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-sm"
+                  >
+                    {followUp.isSubmitting ? (
+                      <svg className="animate-spin w-3.5 h-3.5 opacity-50" viewBox="0 0 24 24" fill="none">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                      </svg>
+                    ) : (
+                      <span className="w-5 h-5 rounded-full border-2 border-[#c1c8c2] group-hover:border-[#012d1d] flex items-center justify-center transition-colors shrink-0">
+                        <span className="w-2 h-2 rounded-full bg-[#012d1d] opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </span>
+                    )}
+                    {option}
+                  </button>
+                ))}
               </div>
+
               {followUp.error && (
-                <div className="px-6 pb-5 text-sm text-[#991b1b]">
-                  Could not submit follow-up: {followUp.error.message}
+                <div className="px-6 pb-5 text-sm text-[#991b1b] bg-red-50 mx-6 mb-5 rounded-lg px-4 py-2">
+                  Could not submit: {followUp.error.message}
                 </div>
               )}
             </div>
           </div>
         )}
+
+        {/* Billy Bronco — mascot advisor */}
+        <div className="bg-white border border-[#e2e3db] rounded-xl px-6 py-3 shadow-[0px_4px_10px_rgba(27,67,50,0.04)] flex items-center justify-between">
+          <BroncoAssistant
+            runStatus={runStatus ?? (snapshot?.case.status as "open" | undefined)}
+            currentPhase={snapshot?.currentRun?.currentPhase}
+          />
+          <div className="hidden sm:flex flex-col items-end gap-1 pr-2">
+            <span className="text-[#717973] text-xs uppercase tracking-[0.6px]">Your Advisor</span>
+            <span className="font-semibold text-[#1a1c18] text-sm">Billy Bronco</span>
+            <span className="text-[#717973] text-xs">Repair Intelligence</span>
+          </div>
+        </div>
 
         {/* Main Workspace: Sidebar + Board */}
         <div className="flex gap-10">

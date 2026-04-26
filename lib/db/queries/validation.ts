@@ -65,6 +65,7 @@ export const RunRowSchema = z.object({
   current_phase: AgentPhaseSchema,
   next_phase: AgentPhaseSchema.nullable().optional(),
   awaiting_question: z.string().nullable().optional(),
+  awaiting_options: z.array(z.string()).nullable().optional(),
   followup_count: z.number().int().nonnegative(),
   trigger_reason: TriggerReasonSchema,
   created_at: z.string(),

@@ -27,15 +27,20 @@ Category: ${caseRecord.category}
 Symptoms: ${wrapUserInput(intakePayload.symptoms.join(', '))}
 Inferred confidence: ${intakePayload.confidence}${followupSection}
 
-If you need clarification before diagnosing, set awaitingUser: true and provide a question.
+If you need clarification before diagnosing, set awaitingUser: true and provide a short question.
+IMPORTANT: Also provide 2-5 short answer "options" the user can click (max 40 chars each, no free text).
+The options must be specific, mutually exclusive, and cover the likely answers to your question.
+Example options for "Does the screen flicker when moved?": ["Yes, always", "Only when tilted", "Rarely", "Never"]
+This constrained choice prevents misuse and limits AI compute.
+
 Otherwise provide a complete diagnosis.
 
 Return JSON matching one of:
 // Complete diagnosis:
 { "awaitingUser": false, "rootCause": string, "confidence": number, "safetyFlags": string[], "technicianQuestions": string[] }
 
-// Awaiting user:
-{ "awaitingUser": true, "question": string, "reason": string }
+// Awaiting user (must include options array):
+{ "awaitingUser": true, "question": string, "reason": string, "options": string[] }
 
 Safety flags to use if applicable: battery_swelling, refrigerant_leak, brake_failure, scooter_battery_thermal`
 

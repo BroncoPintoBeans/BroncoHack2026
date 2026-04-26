@@ -8,7 +8,7 @@ import { runActionPlan } from './action-plan'
 import { runHelperRouting } from './helper-routing'
 
 export interface OrchestratorDeps {
-  updateRun(runId: string, data: Partial<Pick<CaseRunRecord, 'status' | 'currentPhase' | 'nextPhase' | 'awaitingQuestion' | 'followupCount'>>): Promise<CaseRunRecord>
+  updateRun(runId: string, data: Partial<Pick<CaseRunRecord, 'status' | 'currentPhase' | 'nextPhase' | 'awaitingQuestion' | 'awaitingOptions' | 'followupCount'>>): Promise<CaseRunRecord>
   writeDiagnosis(caseId: string, runId: string, payload: DiagnosisCompletePayload): Promise<void>
   writeVerdict(caseId: string, runId: string, payload: EconomicsPayload): Promise<void>
   writeActionPlan(caseId: string, runId: string, payload: ActionPlanPayload): Promise<void>
@@ -43,7 +43,11 @@ export async function runOrchestrator(input: OrchestratorInput): Promise<Orchest
     const diagnosisResult = await runDiagnosis(ctx, caseRecord, intakePayload, followupAnswer)
 
     if (diagnosisResult.awaitingUser) {
-      await input.updateRun(runId, { status: 'awaiting_user', awaitingQuestion: diagnosisResult.question })
+      await input.updateRun(runId, {
+        status: 'awaiting_user',
+        awaitingQuestion: diagnosisResult.question,
+        awaitingOptions: diagnosisResult.options,
+      })
       return { status: 'awaiting_user', question: diagnosisResult.question }
     }
 
