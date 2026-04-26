@@ -100,6 +100,10 @@ function diagnose(caseRecord: CaseRecord): DiagnosisCompletePayload {
 }
 
 const REPLACEMENT_VALUE_CENTS: Record<CaseRecord['category'], number> = {
+  electronics: 45000,
+  clothing: 8000,
+  furniture: 22000,
+  misc: 15000,
   laptop: 65000,
   bicycle: 25000,
   scooter: 42000,

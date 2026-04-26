@@ -31,7 +31,7 @@ type ReportRow = {
   case_id: string
   run_id: string
   user_id: string
-  report_version: number
+  report_version?: number
   report_json: CaseReportJson
   board_summary_json: CaseReportBoardSummary
   created_at: string
@@ -44,7 +44,7 @@ function reportRowToRecord(row: ReportRow): CaseReportRecord {
     caseId: row.case_id,
     runId: row.run_id,
     userId: row.user_id,
-    reportVersion: row.report_version,
+    reportVersion: row.report_version ?? 1,
     reportJson: row.report_json,
     boardSummaryJson: row.board_summary_json,
     createdAt: row.created_at,
@@ -315,6 +315,7 @@ export async function createOrUpdateCaseReportForRun(caseId: string, runId: stri
   }
   demoStore.caseReports.set(record.id, record)
   demoStore.caseReportsByRunId.set(runId, record.id)
+  demoStore.caseReportsByCaseId.set(caseId, record.id)
   return record
 }
 
@@ -330,6 +331,9 @@ export async function getLatestCaseReport(caseId: string): Promise<CaseReportRec
     assertNoSupabaseError(error, 'getLatestCaseReport select')
     return row ? reportRowToRecord(row as ReportRow) : null
   }
+
+  const id = demoStore.caseReportsByCaseId.get(caseId)
+  if (id) return demoStore.caseReports.get(id) ?? null
 
   return [...demoStore.caseReports.values()]
     .filter((report) => report.caseId === caseId)
@@ -348,4 +352,11 @@ export async function getCaseReport(reportId: string): Promise<CaseReportRecord 
   }
 
   return demoStore.caseReports.get(reportId) ?? null
+}
+
+export async function getLatestCaseReportOrThrow(caseId: string): Promise<CaseReportRecord> {
+  const [caseRecord, report] = await Promise.all([getCase(caseId), getLatestCaseReport(caseId)])
+  if (!caseRecord) throw Object.assign(new Error('case not found'), { status: 404 })
+  if (!report) throw Object.assign(new Error('completed report required before publishing'), { status: 409 })
+  return report
 }

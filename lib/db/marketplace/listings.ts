@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { getUserDisplayNames } from "./seller-profiles";
 
 export type MarketplaceListingType = "sale" | "trade" | "free" | "repair";
 
@@ -14,6 +15,7 @@ export interface MarketplaceMedia {
 export interface MarketplaceListing {
   id: string;
   sellerId: string;
+  sellerName: string | null;
   category: string;
   title: string;
   description: string;
@@ -36,6 +38,12 @@ export interface MarketplaceListingFilters {
   q?: string;
   status?: string;
   limit?: number;
+}
+
+export interface MarketplaceSellerSummary {
+  sellerId: string;
+  displayName: string;
+  productTitles: string[];
 }
 
 interface MarketplaceMediaRow {
@@ -123,6 +131,7 @@ function rowToMarketplaceListing(
   return {
     id: row.id,
     sellerId: row.seller_id,
+    sellerName: null,
     category: row.category,
     title: row.title,
     description: row.description ?? "",
@@ -137,6 +146,37 @@ function rowToMarketplaceListing(
     media,
     imageUrl: media.find((item) => item.mediaType === "image" && item.url)?.url ?? null,
   };
+}
+
+function withSellerNames(listings: MarketplaceListing[], sellerNames: Map<string, string>) {
+  return listings.map((listing) => ({
+    ...listing,
+    sellerName: sellerNames.get(listing.sellerId) ?? null,
+  }));
+}
+
+function uniqueProductTitles(
+  rows: Array<{ title: string | null }>,
+  preferredTitle?: string | null
+) {
+  const seen = new Set<string>();
+  const productTitles: string[] = [];
+
+  const pushTitle = (value?: string | null) => {
+    const title = value?.trim();
+    if (!title) return;
+
+    const key = title.toLowerCase();
+    if (seen.has(key)) return;
+
+    seen.add(key);
+    productTitles.push(title);
+  };
+
+  pushTitle(preferredTitle);
+  for (const row of rows) pushTitle(row.title);
+
+  return productTitles;
 }
 
 function matchesSearch(listing: MarketplaceListing, q: string) {
@@ -181,8 +221,11 @@ export async function listMarketplaceListings(filters: MarketplaceListingFilters
   const listings = ((data ?? []) as MarketplaceListingRow[]).map((row) =>
     rowToMarketplaceListing(supabase, row)
   );
+  const sellerIds = [...new Set(listings.map((listing) => listing.sellerId))];
+  const sellerNames = await getUserDisplayNames(sellerIds, supabase);
+  const listingsWithSellers = withSellerNames(listings, sellerNames);
 
-  return filters.q ? listings.filter((listing) => matchesSearch(listing, filters.q!)) : listings;
+  return filters.q ? listingsWithSellers.filter((listing) => matchesSearch(listing, filters.q!)) : listingsWithSellers;
 }
 
 export async function getMarketplaceListingById(id: string) {
@@ -196,5 +239,66 @@ export async function getMarketplaceListingById(id: string) {
   if (error) throw new Error(error.message);
   if (!data) return null;
 
-  return rowToMarketplaceListing(supabase, data as MarketplaceListingRow);
+  const listing = rowToMarketplaceListing(supabase, data as MarketplaceListingRow);
+  const sellerNames = await getUserDisplayNames([listing.sellerId], supabase);
+
+  return {
+    ...listing,
+    sellerName: sellerNames.get(listing.sellerId) ?? null,
+  };
+}
+
+export async function listMarketplaceListingsBySeller(
+  sellerId: string,
+  status = "active",
+  limit = 12
+) {
+  const supabase = await createClient();
+  let query = supabase
+    .from("marketplace_listings")
+    .select(LISTING_SELECT)
+    .eq("seller_id", sellerId)
+    .order("created_at", { ascending: false })
+    .limit(Math.min(limit, 24));
+
+  if (status) {
+    query = query.eq("status", status);
+  }
+
+  const { data, error } = await query;
+  if (error) throw new Error(error.message);
+
+  const listings = ((data ?? []) as MarketplaceListingRow[]).map((row) =>
+    rowToMarketplaceListing(supabase, row)
+  );
+  const sellerNames = await getUserDisplayNames([sellerId], supabase);
+
+  return withSellerNames(listings, sellerNames);
+}
+
+export async function getMarketplaceSellerSummary(
+  sellerId: string,
+  preferredTitle?: string | null
+): Promise<MarketplaceSellerSummary> {
+  const supabase = await createClient();
+  const [sellerNames, { data, error }] = await Promise.all([
+    getUserDisplayNames([sellerId], supabase),
+    supabase
+      .from("marketplace_listings")
+      .select("title")
+      .eq("seller_id", sellerId)
+      .eq("status", "active")
+      .order("created_at", { ascending: false }),
+  ]);
+
+  if (error) throw new Error(error.message);
+
+  return {
+    sellerId,
+    displayName: sellerNames.get(sellerId) ?? "Campus seller",
+    productTitles: uniqueProductTitles(
+      (data ?? []) as Array<{ title: string | null }>,
+      preferredTitle
+    ),
+  };
 }

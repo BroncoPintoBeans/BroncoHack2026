@@ -1,108 +1,321 @@
-"use client";
-
+import Link from "next/link";
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import MessagesSeenTracker from "./MessagesSeenTracker";
+import DeleteConversationButton from "./DeleteConversationButton";
 import BackButton from "@/components/BackButton";
 import Navbar from "@/components/Navbar";
-import { useState } from "react";
+import {
+  deleteMarketplaceConversation,
+  getMarketplaceConversationReplyRecipient,
+  listMarketplaceConversations,
+  listMarketplaceMessages,
+  sendMarketplaceListingMessage,
+} from "@/lib/db/marketplace/conversations";
+import { getMarketplaceListingById } from "@/lib/db/marketplace/listings";
+import { getUser } from "@/lib/server/auth";
+import { createClient } from "@/lib/supabase/server";
 
-const conversations = [
-  { id: 1, name: "Jordan M.", item: "Mountain Bike", preview: "Is the bike still available?", time: "2m ago", unread: 2, avatar: "J" },
-  { id: 2, name: "Taylor R.", item: "Mini Fridge", preview: "I can offer my desk lamp for it", time: "1h ago", unread: 0, avatar: "T" },
-  { id: 3, name: "Alex C.", item: "Bio Textbooks", preview: "Can I pick it up tomorrow?", time: "3h ago", unread: 1, avatar: "A" },
-  { id: 4, name: "Sam L.", item: "TI-84 Calculator", preview: "Thanks for the quick response!", time: "Yesterday", unread: 0, avatar: "S" },
-];
+export const dynamic = "force-dynamic";
 
-const messages = [
-  { id: 1, from: "Jordan M.", text: "Hey! Is the mountain bike still available?", time: "10:02 AM", mine: false },
-  { id: 2, from: "You", text: "Yes it is! Still looking for a buyer.", time: "10:04 AM", mine: true },
-  { id: 3, from: "Jordan M.", text: "Great. Is the price negotiable? I was thinking closer to $40.", time: "10:06 AM", mine: false },
-  { id: 4, from: "You", text: "I could do $45, it's in decent shape aside from the chain rust.", time: "10:08 AM", mine: true },
-  { id: 5, from: "Jordan M.", text: "That works. Can we meet at West Village tomorrow around noon?", time: "10:09 AM", mine: false },
-];
+function formatChatTime(value: string | null) {
+  if (!value) return "";
 
-export default function MessagesPage() {
-  const [selectedConv, setSelectedConv] = useState(conversations[0].id);
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
 
-  const activeConv = conversations.find((c) => c.id === selectedConv) || conversations[0];
-  const activeMessages = selectedConv === 1 ? messages : [
-    { id: 1, from: activeConv.name, text: `Hi — this is a placeholder chat for ${activeConv.name}.`, time: "Now", mine: false },
-  ];
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(date);
+}
+
+async function sendMarketplaceMessage(formData: FormData) {
+  "use server";
+
+  const user = await getUser();
+  if (!user) return;
+
+  const conversationId = String(formData.get("conversationId") ?? "");
+  const listingId = String(formData.get("listingId") ?? "");
+  const body = String(formData.get("body") ?? "").trim();
+  if ((!conversationId && !listingId) || !body) return;
+
+  let resolvedConversationId = conversationId;
+  let receiverId: string | null = null;
+
+  if (listingId) {
+    const listing = await getMarketplaceListingById(listingId);
+    if (!listing || listing.sellerId === user.id) return;
+
+    resolvedConversationId = await sendMarketplaceListingMessage(listingId, body);
+    revalidatePath("/messages");
+    redirect(`/messages?conversation=${resolvedConversationId}&direct=1`);
+  } else if (conversationId) {
+    receiverId = await getMarketplaceConversationReplyRecipient(conversationId, user.id);
+  }
+
+  if (!resolvedConversationId || !receiverId) return;
+
+  const supabase = await createClient();
+  const now = new Date().toISOString();
+  const { error: messageError } = await supabase.from("messages").insert({
+    conversation_id: resolvedConversationId,
+    sender_id: user.id,
+    receiver_id: receiverId,
+    body,
+    created_at: now,
+  });
+
+  if (messageError) return;
+
+  await supabase.from("conversations").update({ updated_at: now }).eq("id", resolvedConversationId);
+  revalidatePath("/messages");
+}
+
+async function deleteConversation(formData: FormData) {
+  "use server";
+
+  const user = await getUser();
+  if (!user) return;
+
+  const conversationId = String(formData.get("conversationId") ?? "").trim();
+  if (!conversationId) return;
+
+  await deleteMarketplaceConversation(conversationId, user.id);
+  revalidatePath("/messages");
+  redirect("/messages");
+}
+
+export default async function MessagesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ conversation?: string; direct?: string; listing?: string }>;
+}) {
+  const [{ conversation: selectedConversationId, direct, listing: draftListingId }, user] = await Promise.all([
+    searchParams,
+    getUser(),
+  ]);
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-[#f9faf2]">
+        <Navbar />
+        <main className="max-w-[720px] mx-auto px-6 py-16">
+          <h1 className="font-bold text-[#012d1d] text-[32px] tracking-tight">Chats</h1>
+          <p className="text-[#414844] text-base mt-3">Sign in to see your marketplace conversations.</p>
+          <Link
+            href="/"
+            className="inline-flex mt-6 bg-[#1b4332] text-white text-sm font-semibold tracking-[0.6px] px-5 py-3 rounded-lg hover:bg-[#012d1d] transition-colors"
+          >
+            Sign in
+          </Link>
+        </main>
+      </div>
+    );
+  }
+
+  const [conversationsWithMessages, draftListing] = await Promise.all([
+    listMarketplaceConversations(user.id),
+    draftListingId ? getMarketplaceListingById(draftListingId) : Promise.resolve(null),
+  ]);
+  const activeConversation = selectedConversationId
+    ? conversationsWithMessages.find((conversation) => conversation.id === selectedConversationId) ?? null
+    : conversationsWithMessages[0] ?? null;
+  const activeMessages = activeConversation
+    ? await listMarketplaceMessages(activeConversation.id, user.id)
+    : [];
+  const latestActiveMessageAt =
+    activeMessages[activeMessages.length - 1]?.createdAt ??
+    activeConversation?.lastMessageAt ??
+    null;
+  const isDirectChat = Boolean(direct || draftListing);
+  const draftRecipientName = draftListing?.sellerName ?? "Seller";
+  const draftRecipientInitial = draftRecipientName[0]?.toUpperCase() ?? "S";
+  const headerName = draftListing ? draftRecipientName : activeConversation?.otherUserName;
+  const headerInitial = draftListing ? draftRecipientInitial : activeConversation?.otherUserInitial;
+  const headerListingTitle = draftListing ? draftListing.title : activeConversation?.listingTitle;
+  const headerListingId = draftListing ? draftListing.id : activeConversation?.listingId;
+  const headerProfileUserId = draftListing ? draftListing.sellerId : activeConversation?.otherUserId;
+  const canRenderChat = Boolean(activeConversation || draftListing);
 
   return (
     <div className="min-h-screen bg-[#f9faf2]">
       <Navbar />
-      <div className="max-w-[1280px] mx-auto px-6 py-8 flex flex-col gap-4" style={{ height: "calc(100vh - 73px)" }}>
-        <BackButton fallbackHref="/marketplace" label="Back to Marketplace" />
+      <MessagesSeenTracker
+        conversationId={activeConversation?.id ?? null}
+        seenAt={latestActiveMessageAt}
+      />
+      <div className="max-w-[1280px] mx-auto px-6 py-8 flex flex-col" style={{ height: "calc(100vh - 73px)" }}>
         <div className="min-h-0 flex-1 bg-white border border-[#e2e3db] rounded-2xl shadow-[0px_4px_20px_0px_rgba(27,67,50,0.06)] overflow-hidden flex">
-          {/* Sidebar */}
+          {!isDirectChat ? (
           <div className="w-80 border-r border-[#e2e3db] flex flex-col shrink-0">
             <div className="p-5 border-b border-[#e2e3db]">
-              <h2 className="font-semibold text-[#1a1c18] text-xl mb-3">Messages</h2>
+              <h2 className="font-semibold text-[#1a1c18] text-xl mb-3">Chats</h2>
               <div className="relative">
                 <svg className="absolute left-3 top-1/2 -translate-y-1/2" width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5.5" stroke="#717973" strokeWidth="1.2"/><path d="M12 12l-1.5-1.5" stroke="#717973" strokeWidth="1.2" strokeLinecap="round"/></svg>
-                <input className="w-full bg-[#f3f4ec] border border-[#e2e3db] rounded-full pl-9 pr-4 py-2 text-sm text-[#414844] outline-none" placeholder="Search messages..." />
+                <input className="w-full bg-[#f3f4ec] border border-[#e2e3db] rounded-full pl-9 pr-4 py-2 text-sm text-[#414844] outline-none" placeholder="Search chats..." />
               </div>
             </div>
             <div className="overflow-y-auto flex-1">
-              {conversations.map((conv) => (
+              {conversationsWithMessages.map((conversation) => (
                 <div
-                  key={conv.id}
-                  onClick={() => setSelectedConv(conv.id)}
-                  className={`p-4 border-b border-[#e2e3db] flex items-start gap-3 cursor-pointer hover:bg-[#f9faf2] transition-colors ${selectedConv === conv.id ? "bg-[#f3f4ec]" : ""}`}
+                  key={conversation.id}
+                  className={`p-4 border-b border-[#e2e3db] flex items-start gap-3 transition-colors ${
+                    activeConversation?.id === conversation.id ? "bg-[#f3f4ec]" : "hover:bg-[#f9faf2]"
+                  }`}
                 >
-                  <div className="w-10 h-10 rounded-full bg-[#1b4332] flex items-center justify-center text-white text-sm font-semibold shrink-0">
-                    {conv.avatar}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-0.5">
-                      <span className="font-semibold text-[#1a1c18] text-sm">{conv.name}</span>
-                      <span className="text-[#717973] text-xs">{conv.time}</span>
+                  <Link
+                    href={`/messages?conversation=${conversation.id}`}
+                    className="shrink-0"
+                    aria-label={`Open chat with ${conversation.otherUserName}`}
+                  >
+                    <div className="w-10 h-10 rounded-full bg-[#1b4332] flex items-center justify-center text-white text-sm font-semibold shrink-0">
+                      {conversation.otherUserInitial}
                     </div>
-                    <p className="text-[#414844] text-xs mb-0.5 truncate">{conv.item}</p>
-                    <p className="text-[#717973] text-xs truncate">{conv.preview}</p>
+                  </Link>
+
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-3">
+                      <Link
+                        href={`/sellers/${conversation.otherUserId}`}
+                        className="text-sm font-semibold text-[#1a1c18] hover:underline whitespace-normal break-words"
+                        aria-label={`Open ${conversation.otherUserName} profile`}
+                        title={conversation.otherUserName}
+                      >
+                        {conversation.otherUserName}
+                      </Link>
+                    </div>
+
+                    <Link
+                      href={`/messages?conversation=${conversation.id}`}
+                      className="mt-0.5 block min-w-0"
+                      aria-label={`Open chat about ${conversation.listingTitle}`}
+                    >
+                      <p className="text-[#414844] text-xs mb-0.5 truncate">{conversation.listingTitle}</p>
+                      <p className="text-[#717973] text-xs truncate">{conversation.preview}</p>
+                    </Link>
+
+                    <p className="mt-1 text-[#717973] text-xs">
+                      {formatChatTime(conversation.lastMessageAt ?? conversation.updatedAt)}
+                    </p>
                   </div>
-                  {conv.unread > 0 && (
-                    <div className="w-5 h-5 rounded-full bg-[#1b4332] flex items-center justify-center text-white text-[10px] font-bold shrink-0">{conv.unread}</div>
-                  )}
+                  <DeleteConversationButton
+                    conversationId={conversation.id}
+                    conversationName={conversation.otherUserName}
+                    action={deleteConversation}
+                  />
                 </div>
               ))}
             </div>
           </div>
+          ) : null}
 
-          {/* Chat Area */}
-          <div className="flex-1 flex flex-col">
-            {/* Chat Header */}
-            <div className="p-5 border-b border-[#e2e3db] flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-[#1b4332] flex items-center justify-center text-white text-sm font-semibold">{activeConv.avatar}</div>
-              <div>
-                <p className="font-semibold text-[#1a1c18] text-base">{activeConv.name}</p>
-                <p className="text-[#717973] text-xs">Re: {activeConv.item}</p>
-              </div>
-              <div className="ml-auto flex gap-2">
-                <button className="border border-[#e2e3db] text-[#1a1c18] text-xs font-semibold tracking-[0.6px] px-4 py-2 rounded-lg hover:bg-[#f3f4ec] transition-colors">View Listing</button>
-                <button className="bg-[#1b4332] text-white text-xs font-semibold tracking-[0.6px] px-4 py-2 rounded-lg hover:bg-[#012d1d] transition-colors">Make Offer</button>
+          {!canRenderChat ? (
+            <div className="flex-1 flex items-center justify-center text-center px-6">
+              <div className="max-w-sm">
+                <p className="text-[#1a1c18] text-xl font-semibold">
+                  {conversationsWithMessages.length === 0 ? "No chats yet" : "Select a chat"}
+                </p>
+                <p className="text-[#717973] text-sm mt-2">
+                  {conversationsWithMessages.length === 0
+                    ? "Message a seller from a marketplace listing and your conversations will appear here."
+                    : "Choose an existing conversation from the list to keep messaging."}
+                </p>
+                {conversationsWithMessages.length === 0 ? (
+                  <Link
+                    href="/marketplace"
+                    className="inline-flex mt-5 bg-[#1b4332] text-white text-sm font-semibold tracking-[0.6px] px-5 py-3 rounded-lg hover:bg-[#012d1d] transition-colors"
+                  >
+                    Browse Marketplace
+                  </Link>
+                ) : null}
               </div>
             </div>
-
-            {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-4">
-              {activeMessages.map((msg) => (
-                <div key={msg.id} className={`flex ${msg.mine ? "justify-end" : "justify-start"}`}>
-                  <div className={`max-w-[60%] px-4 py-3 rounded-2xl text-sm leading-relaxed ${msg.mine ? "bg-[#1b4332] text-white rounded-br-sm" : "bg-[#f3f4ec] text-[#1a1c18] rounded-bl-sm"}`}>
-                    <p>{msg.text}</p>
-                    <p className={`text-[10px] mt-1 ${msg.mine ? "text-white/60" : "text-[#717973]"}`}>{msg.time}</p>
+          ) : (
+            <div className="flex-1 flex flex-col min-w-0">
+              {canRenderChat ? (
+                <>
+                  <div className="p-5 border-b border-[#e2e3db] flex items-center gap-3">
+                    {isDirectChat ? (
+                      <BackButton fallbackHref="/marketplace" label="Back" className="mr-2" />
+                    ) : null}
+                    <Link
+                      href={headerProfileUserId ? `/sellers/${headerProfileUserId}` : "/marketplace"}
+                      className="flex items-center gap-3 min-w-0 hover:opacity-90 transition-opacity"
+                    >
+                      <div className="w-10 h-10 rounded-full bg-[#1b4332] flex items-center justify-center text-white text-sm font-semibold">
+                        {headerInitial}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-semibold text-[#1a1c18] text-base truncate">{headerName}</p>
+                        <p className="text-[#717973] text-xs truncate">Re: {headerListingTitle}</p>
+                      </div>
+                    </Link>
+                    <div className="flex-1" />
+                    {headerListingId ? (
+                      <Link
+                        href={`/marketplace/${headerListingId}`}
+                        className="shrink-0 flex items-center gap-1.5 text-xs font-semibold text-[#1b4332] border border-[#1b4332] rounded-lg px-3 py-1.5 hover:bg-[#1b4332] hover:text-white transition-colors"
+                      >
+                        View listing
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2.5 9.5l7-7M9.5 9.5V2.5H2.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                      </Link>
+                    ) : null}
+                    {headerProfileUserId ? (
+                      <Link
+                        href={`/sellers/${headerProfileUserId}`}
+                        className="shrink-0 flex items-center gap-1.5 text-xs font-semibold text-[#1b4332] border border-[#1b4332] rounded-lg px-3 py-1.5 hover:bg-[#1b4332] hover:text-white transition-colors"
+                      >
+                        View profile
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                          <path
+                            d="M6 6.25a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM2.5 10.5a3.5 3.5 0 0 1 7 0"
+                            stroke="currentColor"
+                            strokeWidth="1.2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      </Link>
+                    ) : null}
                   </div>
-                </div>
-              ))}
-            </div>
 
-            {/* Input */}
-            <div className="p-4 border-t border-[#e2e3db] flex items-center gap-3">
-              <input className="flex-1 bg-[#f3f4ec] border border-[#e2e3db] rounded-full px-5 py-3 text-sm text-[#414844] outline-none" placeholder="Type a message..." />
-              <button className="bg-[#1b4332] text-white w-10 h-10 rounded-full flex items-center justify-center hover:bg-[#012d1d] transition-colors shrink-0">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 8h12M10 4l4 4-4 4" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-              </button>
+                  <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-4">
+                    {activeMessages.length === 0 ? (
+                      <div className="m-auto text-center max-w-sm">
+                        <p className="text-[#1a1c18] text-base font-semibold">No messages yet</p>
+                        <p className="text-[#717973] text-sm mt-1">Start the conversation about this listing below.</p>
+                      </div>
+                    ) : (
+                      activeMessages.map((message) => {
+                        const mine = message.senderUserId === user.id;
+                        return (
+                          <div key={message.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
+                            <div className={`max-w-[60%] px-4 py-3 rounded-2xl text-sm leading-relaxed ${mine ? "bg-[#1b4332] text-white rounded-br-sm" : "bg-[#f3f4ec] text-[#1a1c18] rounded-bl-sm"}`}>
+                              <p>{message.body}</p>
+                              <p className={`text-[10px] mt-1 ${mine ? "text-white/60" : "text-[#717973]"}`}>{formatChatTime(message.createdAt)}</p>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+
+                  <form action={sendMarketplaceMessage} className="p-4 border-t border-[#e2e3db] flex items-center gap-3">
+                    <input type="hidden" name="conversationId" value={activeConversation?.id ?? ""} />
+                    <input type="hidden" name="listingId" value={draftListing?.id ?? ""} />
+                    <input name="body" className="flex-1 bg-[#f3f4ec] border border-[#e2e3db] rounded-full px-5 py-3 text-sm text-[#414844] outline-none" placeholder="Type a message..." />
+                    <button type="submit" className="bg-[#1b4332] text-white w-10 h-10 rounded-full flex items-center justify-center hover:bg-[#012d1d] transition-colors shrink-0" aria-label="Send message">
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 8h12M10 4l4 4-4 4" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    </button>
+                  </form>
+                </>
+              ) : null}
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

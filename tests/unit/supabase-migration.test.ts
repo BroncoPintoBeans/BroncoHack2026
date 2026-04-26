@@ -37,6 +37,6 @@ describe('Supabase Agent Verdict migration contract', () => {
     expect(migration).toMatch(/insert into storage\.buckets[\s\S]+case-media[\s\S]+public[\s\S]+false/i)
     expect(migration).toMatch(/case-media owner upload/i)
     expect(migration).toMatch(/case-media owner read/i)
-    expect(migration).toMatch(/storage\.foldername\(name\)\[1\]\s*=\s*\(select auth\.uid\(\)\)::text/i)
+    expect(migration).toMatch(/\(?storage\.foldername\(name\)\)?\[1\]\s*=\s*\(select auth\.uid\(\)\)::text/i)
   })
 })

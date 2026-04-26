@@ -63,6 +63,7 @@ export async function runOrchestrator(input: OrchestratorInput): Promise<Orchest
         status: 'awaiting_user',
         awaitingQuestion: diagnosisResult.question,
         awaitingOptions: diagnosisResult.options,
+        followupCount: runRecord.followupCount + 1,
       })
       return { status: 'awaiting_user', question: diagnosisResult.question }
     }

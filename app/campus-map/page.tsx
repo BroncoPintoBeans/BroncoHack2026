@@ -1,25 +1,49 @@
-import SiteInfoPage from "@/components/SiteInfoPage";
+import Navbar from "@/components/Navbar";
+import CampusMapClient from "@/components/campus-map/CampusMapClient";
+import {
+  CAMPUS_LOCATIONS,
+  type CampusLocationId,
+  isCampusLocationId,
+} from "@/lib/campus/locations";
 
-export default function CampusMapPage() {
+const DEFAULT_LOCATION_ID = "marketplace-exchange-public-meetup" satisfies CampusLocationId;
+
+type CampusMapSearchParams = Promise<{
+  location?: string | string[] | undefined;
+  q?: string | string[] | undefined;
+}>;
+
+function firstParam(value: string | string[] | undefined): string {
+  if (Array.isArray(value)) {
+    return value[0] ?? "";
+  }
+
+  return value ?? "";
+}
+
+export default async function CampusMapPage({
+  searchParams,
+}: {
+  searchParams: CampusMapSearchParams;
+}) {
+  const params = await searchParams;
+  const locationParam = firstParam(params.location).trim();
+  const initialQuery = firstParam(params.q).trim();
+  const initialLocationId = isCampusLocationId(locationParam)
+    ? locationParam
+    : DEFAULT_LOCATION_ID;
+
   return (
-    <SiteInfoPage
-      eyebrow="Campus Exchange Guide"
-      title="Campus Map"
-      intro="Use these campus-oriented exchange zones as practical meeting points while the app grows toward a fully interactive map."
-      sections={[
-        {
-          title: "Public exchange areas",
-          body: "Choose visible, high-traffic locations such as the University Library entrance, Bronco Student Center, or other public campus spaces during regular hours.",
-        },
-        {
-          title: "Pickup location tips",
-          body: "Listings should use general campus locations rather than private rooms, dorm numbers, or personal addresses. Confirm exact timing through messages.",
-        },
-        {
-          title: "Repair-friendly meetups",
-          body: "For repair-needed items, pick locations with tables, good lighting, and enough space to inspect the item before deciding whether to trade, buy, or repair.",
-        },
-      ]}
-    />
+    <div className="min-h-screen bg-[#f8f9f1] text-[#1a1c18]">
+      <Navbar />
+      <CampusMapClient
+        locations={CAMPUS_LOCATIONS}
+        initialLocationId={initialLocationId}
+        initialQuery={initialQuery}
+        unknownLocationParam={
+          locationParam && !isCampusLocationId(locationParam) ? locationParam : null
+        }
+      />
+    </div>
   );
 }

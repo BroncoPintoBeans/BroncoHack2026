@@ -2,6 +2,7 @@ import { randomUUID } from "crypto";
 import { isSupabaseAvailable, getSupabaseClient } from "@/lib/db/client";
 import { store } from "@/lib/db/community/store";
 import { helperRequestRepository } from "@/lib/db/community/helper-request-repository";
+import { buildContextSnapshot } from "./context-snapshot";
 import { getCaseReport } from "@/lib/db/queries/reports";
 import { assertNoSupabaseError } from "@/lib/db/queries/validation";
 import type { HelperRequestDetail } from "@/lib/types/community";
@@ -145,6 +146,7 @@ async function createSupabaseHelperRequest(input: {
   const row = {
     id: randomUUID(),
     case_id: caseId,
+    run_id: runId,
     report_id: reportId,
     user_id: userId,
     title: body.title ?? summary.title,
@@ -214,6 +216,7 @@ export async function escalateToHelperRequest(
     verdictLabel: summary.verdictLabel,
     rrrScore: summary.rrrScore,
   };
+  const { diagnosisSnapshot, verdictSnapshot, actionPlanSnapshot } = buildContextSnapshot(caseId, report.runId);
 
   if (isSupabaseAvailable()) {
     const existingSupabase = await findActiveSupabaseHelperRequest(caseId, fallback);
@@ -248,9 +251,9 @@ export async function escalateToHelperRequest(
     safety_flags: summary.safetyFlags,
     verdict_label: summary.verdictLabel,
     rrr_score: summary.rrrScore,
-    diagnosis_snapshot: {},
-    verdict_snapshot: {},
-    action_plan_snapshot: {},
+    diagnosis_snapshot: diagnosisSnapshot as Record<string, unknown>,
+    verdict_snapshot: verdictSnapshot as Record<string, unknown>,
+    action_plan_snapshot: actionPlanSnapshot as Record<string, unknown>,
     expires_at: body.expires_at ?? null,
   });
 

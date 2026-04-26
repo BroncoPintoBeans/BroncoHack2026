@@ -6,6 +6,7 @@ import { useCaseRun } from "@/hooks/useCaseRun";
 import { useFollowUp } from "@/hooks/useFollowUp";
 import { ApiError, getPublishedHelperRequest, publishHelperRequest, startRun } from "@/lib/api/client";
 import { BroncoAssistant } from "@/components/BroncoAssistant";
+import Navbar from "@/components/Navbar";
 import type { CaseEventRecord } from "@/lib/types/case";
 import type { AgentPhase } from "@/lib/types/agents";
 import type { RrrBreakdown } from "@/lib/types/payloads";
@@ -64,6 +65,10 @@ const AGENT_STATUS_STYLE: Record<
 };
 
 const CATEGORY_LABELS: Record<string, string> = {
+  electronics: "Electronics",
+  clothing: "Clothing",
+  furniture: "Furniture",
+  misc: "Misc",
   laptop: "Laptop",
   bicycle: "Bicycle",
   scooter: "Scooter",
@@ -111,10 +116,72 @@ function breakdownRows(bd: RrrBreakdown) {
   ];
 }
 
+function RepairGuidePage() {
+  return (
+    <div className="min-h-screen bg-[#f9faf2]">
+      <Navbar />
+      <main className="max-w-[1080px] mx-auto px-6 py-10 flex flex-col gap-8">
+        <section className="bg-white border border-[#e2e3db] rounded-xl p-8 shadow-[0px_4px_10px_rgba(27,67,50,0.04)]">
+          <div className="max-w-3xl">
+            <p className="text-[#717973] text-sm font-semibold tracking-[0.8px] uppercase">Repair Guide</p>
+            <h1 className="font-bold text-[#012d1d] text-[40px] tracking-tight mt-3">How the Agent Verdict Works</h1>
+            <p className="text-[#414844] text-lg leading-8 mt-4">
+              Bronco Repair Desk turns your item details and photos into a repair verdict, action plan, and community-ready helper summary.
+            </p>
+          </div>
+        </section>
+
+        <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {[
+            {
+              title: "1. Add Evidence",
+              body: "Describe the problem, add up to three photos, and include any model or quote details you already have.",
+            },
+            {
+              title: "2. Agents Review",
+              body: "Diagnosis, cost, safety, and action-plan agents evaluate the case. If needed, Billy asks only constrained follow-up questions.",
+            },
+            {
+              title: "3. Get a Report",
+              body: "The final report gives a repair-or-replace verdict, score breakdown, safety notes, and next steps.",
+            },
+          ].map((item) => (
+            <div key={item.title} className="bg-white border border-[#e2e3db] rounded-xl p-5 shadow-[0px_4px_10px_rgba(27,67,50,0.04)]">
+              <h2 className="font-semibold text-[#1a1c18] text-lg">{item.title}</h2>
+              <p className="text-[#414844] text-sm leading-6 mt-3">{item.body}</p>
+            </div>
+          ))}
+        </section>
+
+        <section className="bg-[#f3f4ec] border border-[#e2e3db] rounded-xl p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-5">
+          <div>
+            <h2 className="font-semibold text-[#1a1c18] text-xl">Ready to generate a repair report?</h2>
+            <p className="text-[#717973] text-sm mt-2">Start a new repair case and Billy will generate the report from your item details.</p>
+          </div>
+          <Link
+            href="/repair/new"
+            className="bg-[#1b4332] text-white text-sm font-semibold tracking-[0.6px] px-6 py-3 rounded-lg hover:bg-[#012d1d] transition-colors"
+          >
+            Generate Report
+          </Link>
+        </section>
+      </main>
+    </div>
+  );
+}
+
 export default function RepairWorkspacePage() {
   const params = useParams<{ id: string }>();
   const id = Array.isArray(params?.id) ? params.id[0] : (params?.id ?? "");
 
+  if (id === "case-84920") {
+    return <RepairGuidePage />;
+  }
+
+  return <RepairWorkspaceContent id={id} />;
+}
+
+function RepairWorkspaceContent({ id }: { id: string }) {
   const { snapshot, events, isLoading, error: caseRunError } = useCaseRun(id);
   const runId = snapshot?.currentRun?.id ?? "";
   const followUp = useFollowUp(id, runId);
@@ -227,8 +294,11 @@ export default function RepairWorkspacePage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#f9faf2] flex items-center justify-center">
-        <span className="text-[#414844] text-base">Loading case...</span>
+      <div className="min-h-screen bg-[#f9faf2]">
+        <Navbar />
+        <div className="flex min-h-[320px] items-center justify-center">
+          <span className="text-[#414844] text-base">Loading case...</span>
+        </div>
       </div>
     );
   }
@@ -243,16 +313,16 @@ export default function RepairWorkspacePage() {
 
   return (
     <div className="min-h-screen bg-[#f9faf2] flex flex-col">
-      {/* Workspace Header */}
-      <header className="border-b border-[#e2e3db] px-8 py-4 flex items-center justify-between bg-[#f9faf2]">
-        <div className="flex items-center gap-4">
-          <Link href="/" className="p-2 rounded hover:bg-[#e2e3db] transition-colors">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 3L5 8l5 5" stroke="#1a1c18" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+      <Navbar />
+      <div className="border-b border-[#e2e3db] bg-[#f9faf2]">
+        <div className="max-w-[1200px] mx-auto w-full px-8 py-4 flex items-center justify-between">
+          <Link href="/dashboard" className="inline-flex items-center gap-2 text-[#1b4332] text-sm font-semibold hover:underline">
+            <span aria-hidden="true">&lt;</span>
+            Dashboard
           </Link>
-          <span className="font-semibold text-[#1a1c18] text-base">Bronco Repair Desk</span>
+          <div className="bg-[#012d1d] text-white text-sm px-4 py-2 rounded-lg">Case #{caseShortId}</div>
         </div>
-        <div className="bg-[#012d1d] text-white text-base px-4 py-2 rounded-lg">Case #{caseShortId}</div>
-      </header>
+      </div>
 
       <div className="max-w-[1200px] mx-auto w-full px-8 py-4 flex flex-col gap-8 pb-16">
         {caseRunError && (
@@ -409,6 +479,11 @@ export default function RepairWorkspacePage() {
               <h3 className="font-semibold text-[#1a1c18] text-base px-2">Final Recommendation</h3>
               {isComplete && reportVerdict ? (
                 <div className="bg-white border border-[#e2e3db] rounded-xl p-6 flex flex-col gap-5 shadow-[0px_4px_10px_rgba(27,67,50,0.04)]">
+                  {report ? (
+                    <div className="bg-[#f3f4ec] rounded-lg px-4 py-3 text-sm text-[#414844]">
+                      Canonical report saved as #{report.id.slice(0, 8).toUpperCase()}.
+                    </div>
+                  ) : null}
                   {reportActionPlan?.safetyPreamble && (
                     <div className="bg-[#fff8e7] border border-[#ffdcbd] rounded-lg px-4 py-3 flex gap-2 items-start">
                       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0 mt-0.5"><path d="M8 1.5L1 14.5h14L8 1.5z" stroke="#623f18" strokeWidth="1.4" strokeLinejoin="round"/><path d="M8 6v4M8 11.5h.01" stroke="#623f18" strokeWidth="1.4" strokeLinecap="round"/></svg>

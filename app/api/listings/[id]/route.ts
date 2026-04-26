@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
-import { getMarketplaceListingById } from "@/lib/db/marketplace/listings";
+import {
+  getMarketplaceListingById,
+  getMarketplaceSellerSummary,
+} from "@/lib/db/marketplace/listings";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +18,16 @@ export async function GET(
       return NextResponse.json({ error: "not found" }, { status: 404 });
     }
 
-    return NextResponse.json({ item });
+    const seller = await getMarketplaceSellerSummary(item.sellerId, item.title);
+
+    return NextResponse.json({
+      item,
+      seller: {
+        id: seller.sellerId,
+        display_name: seller.displayName,
+      },
+      seller_products: seller.productTitles,
+    });
   } catch (err) {
     const error = err as { message?: string };
     return NextResponse.json(

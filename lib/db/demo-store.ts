@@ -21,6 +21,7 @@ export interface DemoStore {
   helperRequests: Map<string, HelperRoutingPayload>
   caseReports: Map<string, CaseReportRecord>
   caseReportsByRunId: Map<string, string>
+  caseReportsByCaseId: Map<string, string>
   rewardLedger: Map<string, RewardLedgerRecord[]>
 }
 
@@ -37,6 +38,7 @@ function createStore(): DemoStore {
     helperRequests: new Map(),
     caseReports: new Map(),
     caseReportsByRunId: new Map(),
+    caseReportsByCaseId: new Map(),
     rewardLedger: new Map(),
   }
 

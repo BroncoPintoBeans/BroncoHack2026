@@ -2,7 +2,7 @@ import { z } from 'zod'
 
 const UuidSchema = z.string().uuid()
 
-const CaseCategorySchema = z.enum(['laptop', 'bicycle', 'scooter', 'mini_fridge'])
+const CaseCategorySchema = z.enum(['electronics', 'clothing', 'furniture', 'misc', 'laptop', 'bicycle', 'scooter', 'mini_fridge'])
 const UrgencySchema = z.enum(['low', 'normal', 'urgent'])
 const CaseStatusSchema = z.enum(['draft', 'open', 'running', 'awaiting_user', 'complete', 'failed'])
 const AgentPhaseSchema = z.enum([
