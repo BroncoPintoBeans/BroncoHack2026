@@ -149,6 +149,7 @@ export const fixtureOfferAccepted: HelperRequestOffer = {
 export const fixtureConversation: ConversationSummary = {
   id: CONVERSATION_ID,
   case_id: CASE_ID,
+  listing_id: null,
   helper_request_id: HELPER_REQUEST_ID,
   helper_request_offer_id: OFFER_ID,
   conversation_type: "case_helper",
