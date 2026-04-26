@@ -6,7 +6,7 @@ Primary app: `bronco-repair-desk/` Next.js 16 App Router.
 
 ## Grounding Notes
 
-This plan defines a V1 demo for recommending a CPP Bronco Shuttle option when a student is making a far-enough cross-campus trip. It is intentionally hardcoded and public-data only. Do not build live shuttle tracking, map routing APIs, private location collection, or real-time navigation in V1.
+This plan defines a V1 demo for recommending a CPP Bronco Shuttle option only for the hardcoded allowlisted origin/destination pairs. It is intentionally hardcoded and public-data only. Do not build live shuttle tracking, map routing APIs, private location collection, or real-time navigation in V1.
 
 Official source for shuttle facts:
 
@@ -21,7 +21,7 @@ Confirmed source facts to preserve in product copy and attribution:
 
 ## Product Intent And Boundaries
 
-Green Shuttle Routing Assist adds a lightweight sustainability nudge to relevant campus flows: if a student's pickup and destination are far enough apart, show a route card that suggests using the public CPP shuttle for part of the trip and walking the short final segment.
+Green Shuttle Routing Assist adds a lightweight sustainability nudge to relevant campus flows: for the two V1 allowlisted origin/destination pairs, show a route card that suggests using the public CPP shuttle for part of the trip and walking the short final segment.
 
 V1 supports only the demo route:
 
@@ -200,7 +200,7 @@ Required negative output shape:
   toStop: "student-services-building",
   walkMinutes: 0,
   rideMinutes: 0,
-  reason: "Trip is not far enough across campus for the demo shuttle recommendation.",
+  reason: "Trip is outside the V1 demo shuttle allowlist.",
   sourceUrl: "https://www.cpp.edu/transportation/commuting-to-campus/bronco-shuttle.shtml"
 }
 ```
@@ -353,7 +353,7 @@ Steps:
 2. Add `MAIN_CAMPUS_VILLAGE_DEMO_ROUTE`.
 3. Implement `getShuttleRecommendation({ pickupId, destinationId })`.
 4. Return the exact positive shape for `village` -> `ilab-building-1-room-113`.
-5. Return the exact negative shape for short, same-area, and unknown-location trips, with non-null route and stop IDs plus zeroed estimate fields.
+5. Return the exact negative shape for reverse and all non-allowlisted trips, with non-null route and stop IDs plus zeroed estimate fields.
 6. Add tests for route ID, stop names, source URL, estimate values, allowlisted positive cases, and non-allowlisted negative cases.
 
 ### Task 3: Add Optional Concept3D Public-Data Helpers
