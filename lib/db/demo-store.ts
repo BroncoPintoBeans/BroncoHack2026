@@ -7,6 +7,7 @@ import type {
   ActionPlanPayload,
   HelperRoutingPayload,
 } from '../types/payloads'
+import type { RewardLedgerRecord } from '../rewards/data'
 
 export interface DemoStore {
   cases: Map<string, CaseRecord>
@@ -17,6 +18,7 @@ export interface DemoStore {
   verdicts: Map<string, EconomicsPayload>
   actionPlans: Map<string, ActionPlanPayload>
   helperRequests: Map<string, HelperRoutingPayload>
+  rewardLedger: Map<string, RewardLedgerRecord[]>
 }
 
 function createStore(): DemoStore {
@@ -29,6 +31,7 @@ function createStore(): DemoStore {
     verdicts: new Map(),
     actionPlans: new Map(),
     helperRequests: new Map(),
+    rewardLedger: new Map(),
   }
 
   // Seed cases
