@@ -4,9 +4,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import BackButton from "@/components/BackButton";
 import Navbar from "@/components/Navbar";
+import { marketplaceCategoryValues } from "@/lib/marketplace/categories";
 import { createClient } from "@/lib/supabase/client";
 
-const categories = ["Laptops", "Phones", "Tablets", "Monitors", "Gaming", "Audio", "Appliances", "Other"];
+const categories = [...marketplaceCategoryValues];
 const conditions = ["New", "Open Box", "Like New", "Excellent", "Good", "Used - Fair", "Needs Repair", "For Parts"];
 const mediaLimit = 3;
 const maxMediaSize = 10 * 1024 * 1024;
