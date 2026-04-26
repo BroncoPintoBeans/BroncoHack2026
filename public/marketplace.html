@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Marketplace — Bronco Repair Desk (Static)</title>
+  <style>
+    body{font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial; background:#f9faf2;color:#1a1c18}
+    .container{max-width:1280px;margin:32px auto;padding:16px}
+    .flex{display:flex;gap:12px}
+    .tabs button{padding:8px 12px;border:none;background:none;cursor:pointer}
+    .card{background:white;border:1px solid rgba(193,200,194,0.3);border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(27,67,50,0.04);display:flex;flex-direction:column}
+    .card img{width:100%;height:180px;object-fit:cover}
+    .card .body{padding:12px;flex:1}
+    .price{font-weight:700;margin-top:8px}
+    .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:16px}
+    .wishlist{position:absolute;top:12px;right:12px;width:36px;height:36px;border-radius:999px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+    .badge{position:absolute;right:12px;top:12px;padding:4px 8px;border-radius:6px;font-size:12px}
+    .meta{display:flex;justify-content:space-between;align-items:center;margin-top:12px}
+    .small{font-size:12px;color:#6b7280}
+    .search{padding:10px;border-radius:999px;border:1px solid #c1c8c2;width:280px}
+    .controls{display:flex;gap:8px;align-items:center}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Marketplace (Static)</h1>
+    <p>Static fallback version — interactive via plain JS.</p>
+
+    <div class="flex" style="align-items:center;justify-content:space-between">
+      <div class="controls">
+        <input id="search" class="search" placeholder="Search marketplace..." />
+        <select id="typeSelect"><option>All</option></select>
+        <select id="sortSelect"><option value="oldest">Sort: Oldest</option><option value="newest">Sort: Newest</option><option value="price-asc">Price: Low → High</option><option value="price-desc">Price: High → Low</option><option value="eco">Eco Tokens</option></select>
+      </div>
+      <div class="tabs" id="tabs">
+        <button data-tab="All">All</button>
+        <button data-tab="For Sale">For Sale</button>
+        <button data-tab="Free">Free</button>
+        <button data-tab="Trade">Trade</button>
+        <button data-tab="Repairable">Repairable</button>
+      </div>
+    </div>
+
+    <div id="grid" class="grid"></div>
+  </div>
+
+  <script>
+    // Data (mirrors TS data)
+    const items = [
+      { id: 'vintage-road-bike', title: 'Vintage Road Bike', type: 'bicycle', priceCents: 4500, previousPriceCents: null, badge: 'Repairable', badgeColor: '#ffca98', badgeText: '#7a532b', desc: 'Needs a new chain and some tire patching, but otherwise solid frame.', location: 'West Village', img: 'https://www.figma.com/api/mcp/asset/35e5ed29-e59c-4710-a888-21f11a1394a4', createdAt: '2026-03-01T10:00:00Z', condition: 'Fair' },
+      { id: 'mini-fridge', title: 'Mini Fridge', type: 'appliance', priceCents: null, previousPriceCents: null, badge: 'Like New', badgeColor: '#c1ecd4', badgeText: '#002114', desc: 'Trading for a microwave. Works perfectly, clean inside.', location: 'University Library', img: 'https://www.figma.com/api/mcp/asset/4ab76670-f761-46a7-9f88-6fad6dd3109f', createdAt: '2026-04-20T12:00:00Z', condition: 'Like New' },
+      { id: 'bio-textbooks', title: 'Bio 101 Textbooks', type: 'books', priceCents: 0, previousPriceCents: null, badge: 'Used - Good', badgeColor: '#e2e3db', badgeText: '#1a1c18', desc: 'Some highlighting, but all pages intact. Need gone by Friday.', location: 'Science Building', img: 'https://www.figma.com/api/mcp/asset/2892c185-1b33-4075-808a-a63cb5e27dcc', createdAt: '2026-04-01T08:00:00Z', condition: 'Good' },
+      { id: 'macbook-pro', title: 'Older Macbook Pro', type: 'laptop', priceCents: 12000, previousPriceCents: 15000, badge: 'Repairable', badgeColor: '#ffca98', badgeText: '#7a532b', desc: 'Battery needs replacing soon, runs a bit slow. Good for parts or basic use.', location: 'North Quad', img: 'https://www.figma.com/api/mcp/asset/60147299-9838-4982-8155-e0593c5b8423', createdAt: '2026-02-10T09:00:00Z', condition: 'Fair' }
+    ];
+
+    const typeColors = { laptop: '#1b4332','e-scooter':'#1a73e8',audio:'#6b46c1',appliance:'#b76e79',bicycle:'#d97706',books:'#374151',default:'#012d1d' };
+
+    function formatPrice(cents){ if (cents===null||cents===undefined) return 'Trade'; if (cents===0) return 'Free'; return `$${Math.round(cents/100)}` }
+    function computeEco(item){ const now=Date.now(); const created=new Date(item.createdAt).getTime(); const ageDays=Math.max(0,(now-created)/(1000*60*60*24)); const ageFactor=1+Math.min(365,ageDays)/365; const conditionFactor = item.condition==='Like New'?1:item.condition==='Good'?1.2:1.5; const base=(item.priceCents&&item.priceCents>0)?Math.max(1,item.priceCents/100/10):1; return Math.max(1,Math.round(base*conditionFactor*ageFactor)) }
+
+    const grid = document.getElementById('grid');
+    const search = document.getElementById('search');
+    const typeSelect = document.getElementById('typeSelect');
+    const sortSelect = document.getElementById('sortSelect');
+    const tabs = document.getElementById('tabs');
+
+    let state = { query:'', type:'All', tab:'All', sort:'oldest', wishlist: [] };
+    try{ state.wishlist = JSON.parse(localStorage.getItem('wishlist_ids')||'[]') }catch(e){}
+
+    function renderTypes(){ const set = new Set(items.map(i=>i.type)); typeSelect.innerHTML=''; const optAll = document.createElement('option'); optAll.text='All'; typeSelect.add(optAll); set.forEach(t=>{ const o=document.createElement('option'); o.value=t; o.text=t; typeSelect.add(o) }) }
+    function applyFilters(){ let out = items.filter(i=>i.title.toLowerCase().includes(state.query.toLowerCase())); if(state.type!=='All') out = out.filter(i=>i.type===state.type); if(state.tab!=='All'){ if(state.tab==='For Sale') out=out.filter(i=> (i.priceCents||0)>0); if(state.tab==='Free') out=out.filter(i=>i.priceCents===0); if(state.tab==='Trade') out=out.filter(i=>i.priceCents===null||i.priceCents===undefined); if(state.tab==='Repairable') out=out.filter(i=>(i.badge&&i.badge.toLowerCase().includes('repairable'))||(i.condition&&i.condition.toLowerCase().includes('repairable')))}
+      if(state.sort==='oldest') out.sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt)); if(state.sort==='newest') out.sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)); if(state.sort==='price-asc') out.sort((a,b)=>(a.priceCents||0)-(b.priceCents||0)); if(state.sort==='price-desc') out.sort((a,b)=>(b.priceCents||0)-(a.priceCents||0)); if(state.sort==='eco') out.sort((a,b)=>computeEco(b)-computeEco(a)); renderGrid(out);
+    }
+
+    function renderGrid(list){ grid.innerHTML=''; list.forEach(item=>{
+      const wrapper=document.createElement('div'); wrapper.style.position='relative';
+      const card=document.createElement('div'); card.className='card';
+      const imgWrap=document.createElement('div'); imgWrap.style.position='relative';
+      const img=document.createElement('img'); img.src=item.img; img.alt=item.title; imgWrap.appendChild(img);
+      const badge=document.createElement('div'); badge.className='badge'; badge.style.background=item.badgeColor; badge.style.color=item.badgeText; badge.textContent=item.badge||''; imgWrap.appendChild(badge);
+      card.appendChild(imgWrap);
+      const body=document.createElement('div'); body.className='body';
+      const h=document.createElement('h3'); h.textContent=item.title; body.appendChild(h);
+      const p=document.createElement('p'); p.textContent=item.desc; p.style.marginTop='8px'; p.style.color='#414844'; p.style.fontSize='14px'; body.appendChild(p);
+      const price=document.createElement('div'); price.className='price'; price.style.color=typeColors[item.type]||typeColors.default; price.textContent=formatPrice(item.priceCents); body.appendChild(price);
+      const meta=document.createElement('div'); meta.className='meta';
+      const loc=document.createElement('div'); loc.innerHTML=`<span class='small'>${item.location}</span>`; meta.appendChild(loc);
+      const eco=document.createElement('div'); eco.innerHTML=`<div class='small'>Eco Tokens</div><div style='font-weight:700'>${computeEco(item)} 🍃</div>`; meta.appendChild(eco);
+      body.appendChild(meta);
+      card.appendChild(body);
+      card.addEventListener('click',()=>{ location.href = `/marketplace-item.html?id=${encodeURIComponent(item.id)}` });
+
+      const btn=document.createElement('button'); btn.className='wishlist'; btn.innerText = state.wishlist.includes(item.id)?'♥':'♡'; btn.style.background = state.wishlist.includes(item.id)?'#1b4332':'white'; btn.style.color = state.wishlist.includes(item.id)?'white':'#1b4332'; btn.addEventListener('click',(e)=>{ e.stopPropagation(); const exists = state.wishlist.includes(item.id); state.wishlist = exists? state.wishlist.filter(x=>x!==item.id):[...state.wishlist,item.id]; localStorage.setItem('wishlist_ids',JSON.stringify(state.wishlist)); btn.innerText = state.wishlist.includes(item.id)?'♥':'♡'; btn.style.background = state.wishlist.includes(item.id)?'#1b4332':'white'; btn.style.color = state.wishlist.includes(item.id)?'white':'#1b4332'; });
+
+      wrapper.appendChild(card); wrapper.appendChild(btn);
+      grid.appendChild(wrapper);
+    }) }
+
+    // wire up
+    renderTypes(); applyFilters();
+    search.addEventListener('input',(e)=>{ state.query = e.target.value; applyFilters(); });
+    typeSelect.addEventListener('change',(e)=>{ state.type = e.target.value; applyFilters(); });
+    sortSelect.addEventListener('change',(e)=>{ state.sort = e.target.value; applyFilters(); });
+    tabs.querySelectorAll('button').forEach(b=>{ b.addEventListener('click',()=>{ state.tab = b.dataset.tab; applyFilters(); }) });
+  </script>
+</body>
+</html>

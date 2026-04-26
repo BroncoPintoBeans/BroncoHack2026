@@ -1,21 +1,103 @@
 import Link from "next/link";
+import BackButton from "@/components/BackButton";
 import Navbar from "@/components/Navbar";
+import { listRepairDashboardCases, type RepairDashboardCase } from "@/lib/db/repair/cases";
+import { getUser } from "@/lib/server/auth";
 
-const macbookImg = "https://www.figma.com/api/mcp/asset/28faa150-d788-4f69-9b8c-8183d40e0a95";
-const bikeImg = "https://www.figma.com/api/mcp/asset/35e5ed29-e59c-4710-a888-21f11a1394a4";
-const laptopImg = "https://www.figma.com/api/mcp/asset/60147299-9838-4982-8155-e0593c5b8423";
+export const dynamic = "force-dynamic";
 
-const cases = [
-  { id: "case-84920", title: "MacBook Pro 2019", issue: "Screen flickers when hinge is moved", status: "Analyzing", statusBg: "#ffdcbd", statusText: "#623f18", score: 75, cost: "$15", img: macbookImg, date: "Apr 24, 2024" },
-  { id: "case-83141", title: "Vintage Road Bike", issue: "Chain slipping under load, brakes squeaking", status: "Verdict Ready", statusBg: "#c1ecd4", statusText: "#274e3d", score: 90, cost: "$30", img: bikeImg, date: "Apr 18, 2024" },
-  { id: "case-81003", title: "Old MacBook Air", issue: "Battery drains in 45 minutes, won't hold charge", status: "Draft", statusBg: "#e2e3db", statusText: "#414844", score: 60, cost: "$85", img: laptopImg, date: "Apr 10, 2024" },
-];
+const statusStyles: Record<string, { label: string; bg: string; text: string }> = {
+  draft: { label: "Draft", bg: "#e2e3db", text: "#414844" },
+  awaiting_user: { label: "Needs Info", bg: "#ffdcbd", text: "#623f18" },
+  running: { label: "Analyzing", bg: "#ffdcbd", text: "#623f18" },
+  complete: { label: "Verdict Ready", bg: "#c1ecd4", text: "#274e3d" },
+  failed: { label: "Failed", bg: "#fee2e2", text: "#991b1b" },
+};
 
-export default function DashboardPage() {
+function titleForRepairCase(item: RepairDashboardCase) {
+  if (item.title?.trim()) return item.title;
+  return `${formatCategory(item.category)} repair case`;
+}
+
+function formatCategory(value: string) {
+  return value
+    .split(/[_\s-]+/)
+    .filter(Boolean)
+    .map((word) => word[0]?.toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(new Date(value));
+}
+
+function formatMoney(cents: number | null) {
+  if (cents === null) return null;
+  return `$${Math.round(cents / 100).toLocaleString()}`;
+}
+
+function repairCostLabel(item: RepairDashboardCase) {
+  const low = item.verdict?.repairLowCents ?? null;
+  const high = item.verdict?.repairHighCents ?? null;
+
+  if (low !== null && high !== null) return `${formatMoney(low)}-${formatMoney(high)} est.`;
+  if (low !== null) return `${formatMoney(low)}+ est.`;
+  if (item.quotedPriceCents !== null) return `${formatMoney(item.quotedPriceCents)} quoted`;
+  return "No estimate";
+}
+
+function scorePercent(item: RepairDashboardCase) {
+  if (item.verdict?.rrrScore === null || item.verdict?.rrrScore === undefined) return null;
+  return Math.round(item.verdict.rrrScore * 100);
+}
+
+function estimateCents(item: RepairDashboardCase) {
+  const low = item.verdict?.repairLowCents ?? null;
+  const high = item.verdict?.repairHighCents ?? null;
+  if (low !== null && high !== null) return Math.round((low + high) / 2);
+  return low ?? item.quotedPriceCents;
+}
+
+function statusForRepairCase(item: RepairDashboardCase) {
+  if (item.verdict && item.status === "complete") return statusStyles.complete;
+  return statusStyles[item.status] ?? {
+    label: formatCategory(item.status),
+    bg: "#e2e3db",
+    text: "#414844",
+  };
+}
+
+function statsForCases(cases: RepairDashboardCase[]) {
+  const activeCount = cases.filter((item) => !["complete", "failed"].includes(item.status)).length;
+  const verdictCount = cases.filter((item) => item.verdict || item.status === "complete").length;
+  const estimates = cases.map(estimateCents).filter((value): value is number => value !== null);
+  const averageEstimate = estimates.length
+    ? Math.round(estimates.reduce((sum, value) => sum + value, 0) / estimates.length)
+    : null;
+  const co2SavedKg = verdictCount * 4;
+
+  return [
+    { label: "Active Cases", value: String(activeCount), bg: "bg-[#1b4332]", textColor: "text-white", subColor: "text-white/80" },
+    { label: "Verdicts Ready", value: String(verdictCount), bg: "bg-white", textColor: "text-[#012d1d]", subColor: "text-[#414844]" },
+    { label: "Avg. Repair Cost", value: formatMoney(averageEstimate) ?? "$0", bg: "bg-white", textColor: "text-[#1a1c18]", subColor: "text-[#414844]" },
+    { label: "CO2 Saved (est.)", value: `${co2SavedKg}kg`, bg: "bg-[#e2e3db]", textColor: "text-[#1b4332]", subColor: "text-[#414844]" },
+  ];
+}
+
+export default async function DashboardPage() {
+  const user = await getUser();
+  const cases = user ? await listRepairDashboardCases() : [];
+  const stats = statsForCases(cases);
+
   return (
     <div className="min-h-screen bg-[#f9faf2]">
       <Navbar />
       <div className="max-w-[1280px] mx-auto px-6 py-12 flex flex-col gap-8">
+        <BackButton fallbackHref="/home" label="Back to Home" />
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -29,12 +111,7 @@ export default function DashboardPage() {
 
         {/* Stats Row */}
         <div className="grid grid-cols-4 gap-4">
-          {[
-            { label: "Active Cases", value: "2", bg: "bg-[#1b4332]", textColor: "text-white", subColor: "text-white/80" },
-            { label: "Verdicts Ready", value: "1", bg: "bg-white", textColor: "text-[#012d1d]", subColor: "text-[#414844]" },
-            { label: "Avg. Repair Cost", value: "$43", bg: "bg-white", textColor: "text-[#1a1c18]", subColor: "text-[#414844]" },
-            { label: "CO₂ Saved (est.)", value: "12kg", bg: "bg-[#e2e3db]", textColor: "text-[#1b4332]", subColor: "text-[#414844]" },
-          ].map((stat) => (
+          {stats.map((stat) => (
             <div key={stat.label} className={`${stat.bg} rounded-xl p-6 shadow-[0px_4px_10px_rgba(27,67,50,0.06)]`}>
               <p className={`font-bold text-3xl ${stat.textColor}`}>{stat.value}</p>
               <p className={`text-sm mt-1 ${stat.subColor}`}>{stat.label}</p>
@@ -45,32 +122,58 @@ export default function DashboardPage() {
         {/* Cases List */}
         <div className="flex flex-col gap-4">
           <h2 className="font-semibold text-[#1a1c18] text-xl px-1">Your Cases</h2>
-          {cases.map((c) => (
-            <Link key={c.id} href={`/repair/${c.id}`} className="bg-white border border-[#e2e3db] rounded-xl p-5 flex items-center gap-6 shadow-[0px_4px_10px_rgba(27,67,50,0.04)] hover:shadow-[0px_8px_20px_rgba(27,67,50,0.08)] transition-shadow">
-              <div className="w-20 h-20 border border-[#e2e3db] rounded-lg overflow-hidden shrink-0">
-                <img src={c.img} alt={c.title} className="w-full h-full object-cover" />
-              </div>
-              <div className="flex-1 flex flex-col gap-1">
-                <div className="flex items-center gap-3">
-                  <h3 className="font-semibold text-[#1a1c18] text-lg">{c.title}</h3>
-                  <span className="text-xs font-normal px-2 py-0.5 rounded" style={{ backgroundColor: c.statusBg, color: c.statusText }}>{c.status}</span>
+          {!user ? (
+            <div className="bg-white border border-[#e2e3db] rounded-xl p-8 shadow-[0px_4px_10px_rgba(27,67,50,0.04)]">
+              <h3 className="font-semibold text-[#1a1c18] text-lg">Sign in to see your repair cases</h3>
+              <p className="text-[#414844] text-sm mt-2">Your repair dashboard is tied to the cases owned by your Supabase account.</p>
+              <Link href="/" className="inline-flex mt-5 bg-[#1b4332] text-white text-xs font-semibold tracking-[0.6px] px-6 py-3 rounded-full hover:bg-[#012d1d] transition-colors">
+                Sign in
+              </Link>
+            </div>
+          ) : cases.length === 0 ? (
+            <div className="bg-white border border-[#e2e3db] rounded-xl p-8 shadow-[0px_4px_10px_rgba(27,67,50,0.04)]">
+              <h3 className="font-semibold text-[#1a1c18] text-lg">No repair cases found</h3>
+              <p className="text-[#414844] text-sm mt-2">
+                The dashboard is connected to Supabase, but your `cases` table is not returning any repair cases for this account yet.
+              </p>
+            </div>
+          ) : cases.map((repairCase) => {
+            const status = statusForRepairCase(repairCase);
+            const score = scorePercent(repairCase);
+
+            return (
+              <Link key={repairCase.id} href={`/repair/${repairCase.id}`} className="bg-white border border-[#e2e3db] rounded-xl p-5 flex items-center gap-6 shadow-[0px_4px_10px_rgba(27,67,50,0.04)] hover:shadow-[0px_8px_20px_rgba(27,67,50,0.08)] transition-shadow">
+                <div className="w-20 h-20 border border-[#e2e3db] rounded-lg overflow-hidden shrink-0 bg-[#e8e9e1] flex items-center justify-center">
+                  {repairCase.imageUrl ? (
+                    <img src={repairCase.imageUrl} alt={titleForRepairCase(repairCase)} className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-[#1b4332] text-xs font-bold tracking-[0.6px] uppercase text-center px-2">
+                      {formatCategory(repairCase.category)}
+                    </span>
+                  )}
                 </div>
-                <p className="text-[#414844] text-sm">{c.issue}</p>
-                <p className="text-[#717973] text-xs">{c.date}</p>
-              </div>
-              <div className="flex flex-col items-end gap-2 shrink-0">
-                <div className="flex items-center gap-2">
-                  <span className="text-[#414844] text-sm">Score</span>
-                  <span className="font-semibold text-[#012d1d] text-lg">{c.score}%</span>
+                <div className="flex-1 flex flex-col gap-1">
+                  <div className="flex items-center gap-3">
+                    <h3 className="font-semibold text-[#1a1c18] text-lg">{titleForRepairCase(repairCase)}</h3>
+                    <span className="text-xs font-normal px-2 py-0.5 rounded" style={{ backgroundColor: status.bg, color: status.text }}>{status.label}</span>
+                  </div>
+                  <p className="text-[#414844] text-sm">{repairCase.symptoms}</p>
+                  <p className="text-[#717973] text-xs">{formatDate(repairCase.createdAt)}</p>
                 </div>
-                <div className="w-24 h-2 bg-[#e2e3db] rounded-full">
-                  <div className="h-2 bg-[#1b4332] rounded-full" style={{ width: `${c.score}%` }} />
+                <div className="flex flex-col items-end gap-2 shrink-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[#414844] text-sm">Score</span>
+                    <span className="font-semibold text-[#012d1d] text-lg">{score === null ? "Pending" : `${score}%`}</span>
+                  </div>
+                  <div className="w-24 h-2 bg-[#e2e3db] rounded-full">
+                    <div className="h-2 bg-[#1b4332] rounded-full" style={{ width: `${score ?? 0}%` }} />
+                  </div>
+                  <span className="font-semibold text-[#1a1c18] text-base">{repairCostLabel(repairCase)}</span>
                 </div>
-                <span className="font-semibold text-[#1a1c18] text-base">{c.cost} est.</span>
-              </div>
-              <svg width="10" height="17" viewBox="0 0 10 17" fill="none" className="ml-2 shrink-0"><path d="M1 1l8 7.5L1 16" stroke="#c1c8c2" strokeWidth="1.5" strokeLinecap="round"/></svg>
-            </Link>
-          ))}
+                <svg width="10" height="17" viewBox="0 0 10 17" fill="none" className="ml-2 shrink-0"><path d="M1 1l8 7.5L1 16" stroke="#c1c8c2" strokeWidth="1.5" strokeLinecap="round"/></svg>
+              </Link>
+            );
+          })}
         </div>
       </div>
     </div>

@@ -2,6 +2,7 @@
 import { ChangeEvent, DragEvent, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import BackButton from "@/components/BackButton";
 import Navbar from "@/components/Navbar";
 import { createClient } from "@/lib/supabase/client";
 
@@ -341,6 +342,7 @@ export default function CreateListingPage() {
     <div className="min-h-screen bg-[#f9faf2]">
       <Navbar />
       <div className="max-w-[860px] mx-auto px-6 py-12">
+        <BackButton fallbackHref="/marketplace" label="Back to Marketplace" className="mb-6" />
         {/* Header */}
         <div className="mb-8">
           <h1 className="font-bold text-[#012d1d] text-[32px] tracking-[-0.64px]">Create a Listing</h1>

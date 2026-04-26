@@ -185,13 +185,15 @@ test.describe("Communal Repair — API smoke suite", () => {
     expect(body.helper_request?.status).toBe("resolved");
   });
 
-  test("10. No marketplace/Gemini routes: GET /api/listings returns 404", async ({
+  test("10. Marketplace listings route returns live items", async ({
     request,
   }) => {
     const res = await request.get(`${BASE}/api/listings`, {
       headers: headers(OWNER_USER_ID),
     });
-    expect(res.status()).toBe(404);
+    expect(res.status()).toBe(200);
+    const body = await res.json();
+    expect(Array.isArray(body.items)).toBe(true);
   });
 });
 */

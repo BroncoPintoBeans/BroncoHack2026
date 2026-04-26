@@ -10,7 +10,6 @@ const navLinks = [
   { href: "/marketplace", label: "Marketplace" },
   { href: "/repair/case-84920", label: "Repair Guide" },
   { href: "/rewards", label: "Impact" },
-  { href: "/marketplace", label: "Categories" },
 ];
 
 export default function Navbar() {

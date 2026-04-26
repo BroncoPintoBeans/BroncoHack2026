@@ -1,5 +1,5 @@
 "use client";
-import Link from "next/link";
+import BackButton from "@/components/BackButton";
 
 const macbookImg = "https://www.figma.com/api/mcp/asset/28faa150-d788-4f69-9b8c-8183d40e0a95";
 const macbookDetailImg = "https://www.figma.com/api/mcp/asset/0589ea48-6685-4c4a-b4ce-b2fb659caab5";
@@ -23,9 +23,7 @@ export default function RepairWorkspacePage() {
       {/* Workspace Header */}
       <header className="border-b border-[#e2e3db] px-8 py-4 flex items-center justify-between bg-[#f9faf2]">
         <div className="flex items-center gap-4">
-          <Link href="/" className="p-2 rounded hover:bg-[#e2e3db] transition-colors">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 3L5 8l5 5" stroke="#1a1c18" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-          </Link>
+          <BackButton fallbackHref="/dashboard" label="Back" />
           <span className="font-semibold text-[#1a1c18] text-base">Bronco Repair Desk</span>
         </div>
         <div className="bg-[#012d1d] text-white text-base px-4 py-2 rounded-lg">Case #84920</div>

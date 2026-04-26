@@ -1,4 +1,5 @@
 import Link from "next/link";
+import BackButton from "@/components/BackButton";
 import Navbar from "@/components/Navbar";
 
 const heroImg = "https://www.figma.com/api/mcp/asset/e9af5714-e133-4b76-8ce4-65f1b50a0c81";
@@ -12,39 +13,42 @@ export default function HomePage() {
 
       {/* Hero */}
       <section className="bg-[#f3f4ec] py-24">
-        <div className="max-w-[1280px] mx-auto px-6 grid grid-cols-2 gap-12 items-center" style={{ minHeight: 500 }}>
-          <div className="flex flex-col gap-4">
-            <h1 className="font-bold text-[#012d1d] text-[32px] leading-tight tracking-[-0.8px]">
-              Sustainable Campus Life, Made<br />Practical.
-            </h1>
-            <p className="text-[#414844] text-lg leading-relaxed max-w-[490px]">
-              Trade items with fellow students or get a repair verdict for your broken essentials. Save money and keep waste out of landfills.
-            </p>
-            <div className="flex gap-4 pt-2">
-              <Link
-                href="/create-listing"
-                className="flex items-center gap-2 bg-[#ffca98] text-[#7a532a] text-xs font-semibold tracking-[0.6px] px-6 py-3 rounded-lg hover:bg-[#f5b97a] transition-colors"
-              >
-                Sell or Trade an Item
-              </Link>
-              <Link
-                href="/repair/case-84920"
-                className="flex items-center gap-2 bg-[#1b4332] text-white text-xs font-semibold tracking-[0.6px] px-6 py-3 rounded-lg hover:bg-[#012d1d] transition-colors"
-              >
-                {`Check if It's Worth Repairing`}
-              </Link>
+        <div className="max-w-[1280px] mx-auto px-6 flex flex-col gap-8">
+          <BackButton fallbackHref="/" label="Back" />
+          <div className="grid grid-cols-2 gap-12 items-center" style={{ minHeight: 500 }}>
+            <div className="flex flex-col gap-4">
+              <h1 className="font-bold text-[#012d1d] text-[32px] leading-tight tracking-[-0.8px]">
+                Sustainable Campus Life, Made<br />Practical.
+              </h1>
+              <p className="text-[#414844] text-lg leading-relaxed max-w-[490px]">
+                Trade items with fellow students or get a repair verdict for your broken essentials. Save money and keep waste out of landfills.
+              </p>
+              <div className="flex gap-4 pt-2">
+                <Link
+                  href="/create-listing"
+                  className="flex items-center gap-2 bg-[#ffca98] text-[#7a532a] text-xs font-semibold tracking-[0.6px] px-6 py-3 rounded-lg hover:bg-[#f5b97a] transition-colors"
+                >
+                  Sell or Trade an Item
+                </Link>
+                <Link
+                  href="/repair/case-84920"
+                  className="flex items-center gap-2 bg-[#1b4332] text-white text-xs font-semibold tracking-[0.6px] px-6 py-3 rounded-lg hover:bg-[#012d1d] transition-colors"
+                >
+                  {`Check if It's Worth Repairing`}
+                </Link>
+              </div>
+              <div className="flex gap-6 pt-4">
+                {["SAVE MONEY", "REDUCE WASTE", "TRUSTED REPAIR GUIDANCE"].map((label) => (
+                  <div key={label} className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-[#1b4332] opacity-60" />
+                    <span className="text-[#414844] text-xs font-semibold tracking-[0.6px] uppercase">{label}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div className="flex gap-6 pt-4">
-              {["SAVE MONEY", "REDUCE WASTE", "TRUSTED REPAIR GUIDANCE"].map((label) => (
-                <div key={label} className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-[#1b4332] opacity-60" />
-                  <span className="text-[#414844] text-xs font-semibold tracking-[0.6px] uppercase">{label}</span>
-                </div>
-              ))}
+            <div className="rounded-2xl overflow-hidden shadow-[0px_4px_20px_0px_rgba(27,67,50,0.08)]" style={{ height: 500 }}>
+              <img src={heroImg} alt="Student repairing a bicycle" className="w-full h-full object-cover" />
             </div>
-          </div>
-          <div className="rounded-2xl overflow-hidden shadow-[0px_4px_20px_0px_rgba(27,67,50,0.08)]" style={{ height: 500 }}>
-            <img src={heroImg} alt="Student repairing a bicycle" className="w-full h-full object-cover" />
           </div>
         </div>
       </section>
