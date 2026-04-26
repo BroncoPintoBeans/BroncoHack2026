@@ -256,7 +256,7 @@ export default function MarketplaceDetailClient({ item, isOwner }: MarketplaceDe
                   This item is marked as repairable or for parts. A repair verdict can help buyers
                   understand the likely fix before pickup.
                 </p>
-                <Link href="/repair/case-84920" className="text-[#1b4332] text-xs font-semibold tracking-[0.6px] underline mt-1">
+                <Link href="/repair/new" className="text-[#1b4332] text-xs font-semibold tracking-[0.6px] underline mt-1">
                   Get a Repair Verdict -&gt;
                 </Link>
               </div>

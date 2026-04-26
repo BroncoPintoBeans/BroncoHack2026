@@ -71,7 +71,7 @@ function ledgerEntryToActivity(entry: RewardLedgerRecord) {
 
 async function listRewardLedger(userId: string): Promise<RewardLedgerRecord[]> {
   if (isSupabaseAvailable()) {
-    const { data: rows, error } = await getSupabaseClient()
+    const { data: rows, error } = await (await getSupabaseClient())
       .from('reward_ledger')
       .select()
       .eq('user_id', userId)
@@ -90,7 +90,7 @@ async function findDuplicateLedgerEntry(data: {
   sourceId?: string
 }): Promise<RewardLedgerRecord | null> {
   if (isSupabaseAvailable()) {
-    let query = getSupabaseClient()
+    let query = (await getSupabaseClient())
       .from('reward_ledger')
       .select()
       .eq('user_id', data.userId)
@@ -122,7 +122,7 @@ async function findDuplicateLedgerEntry(data: {
 
 async function insertRewardLedgerEntry(entry: RewardLedgerRecord): Promise<RewardLedgerRecord> {
   if (isSupabaseAvailable()) {
-    const { data: row, error } = await getSupabaseClient()
+    const { data: row, error } = await (await getSupabaseClient())
       .from('reward_ledger')
       .insert({
         id: entry.id,

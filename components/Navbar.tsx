@@ -8,7 +8,7 @@ import type { User } from "@supabase/supabase-js";
 
 const navLinks = [
   { href: "/marketplace", label: "Marketplace" },
-  { href: "/repair/case-84920", label: "Repair Guide" },
+  { href: "/repair/new", label: "Repair Guide" },
   { href: "/rewards", label: "Impact" },
 ];
 
@@ -57,7 +57,7 @@ export default function Navbar() {
         </div>
         <div className="flex items-center gap-4">
           <Link
-            href="/repair/case-84920"
+            href="/repair/new"
             className="bg-[#1b4332] text-white text-xs font-semibold font-['Work_Sans',sans-serif] tracking-[0.6px] px-4 py-2 rounded-lg hover:bg-[#012d1d] transition-colors"
           >
             Start Repair
