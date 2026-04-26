@@ -1,4 +1,5 @@
 import Link from "next/link";
+import BackButton from "@/components/BackButton";
 import Navbar from "@/components/Navbar";
 import { listRepairDashboardCases, type RepairDashboardCase } from "@/lib/db/repair/cases";
 import { getUser } from "@/lib/server/auth";
@@ -71,6 +72,7 @@ export default async function DashboardPage() {
     <div className="min-h-screen bg-[#f9faf2]">
       <Navbar />
       <div className="max-w-[1280px] mx-auto px-6 py-12 flex flex-col gap-8">
+        <BackButton fallbackHref="/" label="Back to Home" alwaysNavigate />
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>

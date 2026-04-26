@@ -1,5 +1,5 @@
 import type { CaseCategory, AgentPhase, PhaseStatus, Urgency } from './agents'
-import type { DiagnosisCompletePayload, EconomicsPayload, ActionPlanPayload, HelperMatch } from './payloads'
+import type { DiagnosisCompletePayload, EconomicsPayload, ActionPlanPayload, HelperMatch, HelperRoutingPayload } from './payloads'
 
 export interface CaseRecord {
   id: string
@@ -48,6 +48,34 @@ export interface CaseEventRecord {
   createdAt: string
 }
 
+export interface CaseReportRecord {
+  id: string
+  caseId: string
+  runId: string
+  userId: string
+  reportJson: {
+    diagnosis: DiagnosisCompletePayload
+    verdict: EconomicsPayload
+    actionPlan: ActionPlanPayload
+    helperRouting: HelperRoutingPayload
+    media: CaseMediaRecord[]
+    followups: unknown[]
+  }
+  boardSummaryJson: {
+    title: string
+    publicSummary: string
+    helperRequestTemplate: string | null
+    category: string
+    urgency: string
+    skillTags: string[]
+    safetyFlags: string[]
+    verdictLabel: string | null
+    rrrScore: number | null
+  }
+  createdAt: string
+  updatedAt: string
+}
+
 export interface CurrentCaseOutput {
   case: CaseRecord
   currentRun?: CaseRunRecord
@@ -55,5 +83,6 @@ export interface CurrentCaseOutput {
   verdict?: EconomicsPayload
   actionPlan?: ActionPlanPayload
   helperMatches?: HelperMatch[]
+  report?: CaseReportRecord
   events: CaseEventRecord[]
 }

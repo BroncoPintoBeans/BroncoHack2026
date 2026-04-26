@@ -24,6 +24,7 @@ export interface CreateHelperRequestData {
   id?: string;
   case_id: string;
   run_id: string | null;
+  report_id: string;
   user_id: string;
   title: string;
   public_summary: string;
@@ -81,6 +82,7 @@ function rowToDetail(row: HelperRequestRow): HelperRequestDetail {
     id: row.id,
     case_id: row.case_id,
     run_id: row.run_id,
+    report_id: row.report_id,
     user_id: row.user_id,
     title: row.title,
     public_summary: row.public_summary,
@@ -108,6 +110,7 @@ function rowToCard(row: HelperRequestRow): HelperRequestCard {
   return {
     id: row.id,
     case_id: row.case_id,
+    report_id: row.report_id,
     title: row.title,
     public_summary: row.public_summary,
     category: row.category,
@@ -205,6 +208,7 @@ export const helperRequestRepository: HelperRequestRepository = {
       id: data.id ?? randomUUID(),
       case_id: data.case_id,
       run_id: data.run_id,
+      report_id: data.report_id,
       user_id: data.user_id,
       title: data.title,
       public_summary: data.public_summary,

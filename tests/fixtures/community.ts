@@ -92,6 +92,7 @@ export const fixtureHelperRequestOpen: HelperRequestDetail = {
   id: HELPER_REQUEST_ID,
   case_id: CASE_ID,
   run_id: RUN_ID,
+  report_id: null,
   user_id: OWNER_USER_ID,
   title: "Need help replacing MacBook Pro display cable (Flexgate)",
   public_summary:
@@ -149,6 +150,7 @@ export const fixtureOfferAccepted: HelperRequestOffer = {
 export const fixtureConversation: ConversationSummary = {
   id: CONVERSATION_ID,
   case_id: CASE_ID,
+  listing_id: null,
   helper_request_id: HELPER_REQUEST_ID,
   helper_request_offer_id: OFFER_ID,
   conversation_type: "case_helper",

@@ -90,7 +90,12 @@ export default function NewRepairPage() {
         setSubmitPhase('uploading')
         for (const file of mediaFiles) {
           const dataUrl = await fileToDataUrl(file)
-          await createMedia(newCase.id, { url: dataUrl, mediaType: 'image' })
+          await createMedia(newCase.id, {
+            dataUrl,
+            mediaType: 'image',
+            fileType: file.type || 'image/jpeg',
+            fileName: file.name,
+          })
         }
       }
 

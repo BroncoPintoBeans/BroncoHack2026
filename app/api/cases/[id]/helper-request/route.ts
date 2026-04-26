@@ -31,7 +31,7 @@ export async function POST(
       );
     }
 
-    const result = escalateToHelperRequest(caseId, userId, parsed.data);
+    const result = await escalateToHelperRequest(caseId, userId, parsed.data);
     return NextResponse.json(result, { status: result.created ? 201 : 200 });
   } catch (err) {
     const e = err as { status?: number; message?: string };

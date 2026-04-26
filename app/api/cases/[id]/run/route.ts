@@ -7,6 +7,7 @@ import { acquireCaseLock } from '@/lib/db/locks'
 import { runOrchestrator } from '@/lib/agents/orchestrator'
 import { writeDiagnosis, writeVerdict, writeActionPlan, writeHelperRequest } from '@/lib/db/queries/outputs'
 import { insertEvent } from '@/lib/db/queries/events'
+import { materializeCaseReport } from '@/lib/db/queries/reports'
 
 export async function POST(
   request: NextRequest,
@@ -52,6 +53,7 @@ export async function POST(
       writeVerdict,
       writeActionPlan,
       writeHelperRequest,
+      materializeReport: materializeCaseReport,
       insertEvent,
     })
 

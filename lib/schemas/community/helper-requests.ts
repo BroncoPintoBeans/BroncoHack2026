@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 export const createHelperRequestSchema = z.object({
+  report_id: z.string().uuid(),
   title: z.string().min(1).max(200).optional(),
   public_summary: z.string().min(1).max(2000).optional(),
   campus_area: z.string().max(100).optional(),
