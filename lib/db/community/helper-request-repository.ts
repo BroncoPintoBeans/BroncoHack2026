@@ -24,6 +24,7 @@ export interface CreateHelperRequestData {
   id?: string;
   case_id: string;
   run_id: string | null;
+  report_id?: string | null;
   user_id: string;
   title: string;
   public_summary: string;
@@ -34,6 +35,8 @@ export interface CreateHelperRequestData {
   preferred_time?: string | null;
   skill_tags?: string[];
   safety_flags?: string[];
+  verdict_label?: string | null;
+  rrr_score?: number | null;
   diagnosis_snapshot?: Record<string, unknown>;
   verdict_snapshot?: Record<string, unknown>;
   action_plan_snapshot?: Record<string, unknown>;
@@ -81,6 +84,7 @@ function rowToDetail(row: HelperRequestRow): HelperRequestDetail {
     id: row.id,
     case_id: row.case_id,
     run_id: row.run_id,
+    report_id: row.report_id,
     user_id: row.user_id,
     title: row.title,
     public_summary: row.public_summary,
@@ -91,6 +95,8 @@ function rowToDetail(row: HelperRequestRow): HelperRequestDetail {
     preferred_time: row.preferred_time,
     skill_tags: row.skill_tags,
     safety_flags: row.safety_flags,
+    verdict_label: row.verdict_label,
+    rrr_score: row.rrr_score,
     status: row.status,
     diagnosis_snapshot: row.diagnosis_snapshot,
     verdict_snapshot: row.verdict_snapshot,
@@ -104,10 +110,10 @@ function rowToDetail(row: HelperRequestRow): HelperRequestDetail {
 }
 
 function rowToCard(row: HelperRequestRow): HelperRequestCard {
-  const verdictSnapshot = row.verdict_snapshot as Record<string, unknown>;
   return {
     id: row.id,
     case_id: row.case_id,
+    report_id: row.report_id,
     title: row.title,
     public_summary: row.public_summary,
     category: row.category,
@@ -117,8 +123,8 @@ function rowToCard(row: HelperRequestRow): HelperRequestCard {
     skill_tags: row.skill_tags,
     safety_flags: row.safety_flags,
     status: row.status,
-    verdict_label: typeof verdictSnapshot?.label === "string" ? verdictSnapshot.label : null,
-    rrr_score: typeof verdictSnapshot?.rrr_score === "number" ? verdictSnapshot.rrr_score : null,
+    verdict_label: row.verdict_label,
+    rrr_score: row.rrr_score,
     pending_offer_count: countPendingOffersForRequest(row.id),
     created_at: row.created_at,
     updated_at: row.updated_at,
@@ -205,6 +211,7 @@ export const helperRequestRepository: HelperRequestRepository = {
       id: data.id ?? randomUUID(),
       case_id: data.case_id,
       run_id: data.run_id,
+      report_id: data.report_id ?? null,
       user_id: data.user_id,
       title: data.title,
       public_summary: data.public_summary,
@@ -215,6 +222,8 @@ export const helperRequestRepository: HelperRequestRepository = {
       preferred_time: data.preferred_time ?? null,
       skill_tags: data.skill_tags ?? [],
       safety_flags: data.safety_flags ?? [],
+      verdict_label: data.verdict_label ?? null,
+      rrr_score: data.rrr_score ?? null,
       status: "open",
       diagnosis_snapshot: data.diagnosis_snapshot ?? {},
       verdict_snapshot: data.verdict_snapshot ?? {},

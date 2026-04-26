@@ -43,7 +43,7 @@ export function useCaseRun(id: string): {
         if (!cancelled) {
           setError(err instanceof ApiError ? err : new ApiError('Failed to load case data', 500))
           setIsLoading(false)
-          pollingRef.current = false
+          pollingRef.current = true
         }
       }
     }

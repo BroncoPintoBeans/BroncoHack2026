@@ -12,6 +12,7 @@ import { createCase } from '../../lib/db/queries/cases'
 import { createRun, updateRun } from '../../lib/db/queries/runs'
 import { writeDiagnosis, writeVerdict, writeActionPlan, writeHelperRequest } from '../../lib/db/queries/outputs'
 import { insertEvent } from '../../lib/db/queries/events'
+import { createOrUpdateCaseReportForRun } from '../../lib/db/queries/reports'
 import { runOrchestrator } from '../../lib/agents/orchestrator'
 import { getCurrentCaseOutput } from '../../lib/db/queries/current'
 
@@ -48,6 +49,7 @@ describe('followup flow (awaiting_user → resume)', () => {
       writeVerdict,
       writeActionPlan,
       writeHelperRequest,
+      writeCaseReport: createOrUpdateCaseReportForRun,
       insertEvent,
     })
 

@@ -1,7 +1,7 @@
 import { randomUUID } from "crypto";
 import { store } from "@/lib/db/community/store";
 import { helperRequestRepository } from "@/lib/db/community/helper-request-repository";
-import { buildContextSnapshot } from "./context-snapshot";
+import { getCaseReport } from "@/lib/db/queries/reports";
 import type { HelperRequestDetail } from "@/lib/types/community";
 import type { CaseEventRow } from "@/lib/db/community/types";
 
@@ -13,6 +13,7 @@ const TERMINAL_STATUSES = new Set([
 ]);
 
 export interface EscalateBody {
+  report_id: string;
   title?: string;
   public_summary?: string;
   campus_area?: string;
@@ -26,58 +27,45 @@ export interface EscalateResult {
   created: boolean;
 }
 
-export function escalateToHelperRequest(
+export async function escalateToHelperRequest(
   caseId: string,
   userId: string,
   body: EscalateBody
-): EscalateResult {
+): Promise<EscalateResult> {
+  const report = await getCaseReport(body.report_id);
+  if (!report) {
+    throw Object.assign(new Error("completed report not found"), { status: 422 });
+  }
+  if (report.caseId !== caseId || report.userId !== userId) {
+    throw Object.assign(new Error("report does not match this case"), { status: 409 });
+  }
+
   const existing = helperRequestRepository.findByCase(caseId);
   if (existing) {
     return { helper_request: existing, created: false };
   }
 
-  const caseRow = store.cases.get(caseId);
-  if (!caseRow) throw new Error(`case ${caseId} not found`);
-
-  // Find the latest run for this case
-  let latestRun: { id: string; created_at: string } | null = null;
-  for (const run of store.case_runs.values()) {
-    if (run.case_id === caseId) {
-      if (!latestRun || run.created_at > latestRun.created_at) {
-        latestRun = run;
-      }
-    }
-  }
-
-  const runId = latestRun?.id ?? null;
-  const { diagnosisSnapshot, verdictSnapshot, actionPlanSnapshot } =
-    buildContextSnapshot(caseId, runId);
-
-  const helperTemplate =
-    typeof actionPlanSnapshot.helper_request_template === "string"
-      ? actionPlanSnapshot.helper_request_template
-      : null;
-
-  const safetyFlags = Array.isArray(diagnosisSnapshot.safety_flags)
-    ? (diagnosisSnapshot.safety_flags as string[])
-    : [];
+  const summary = report.boardSummaryJson;
 
   const created = helperRequestRepository.create({
     case_id: caseId,
-    run_id: runId,
+    run_id: report.runId,
+    report_id: report.id,
     user_id: userId,
-    title: body.title ?? caseRow.title,
-    public_summary: body.public_summary ?? helperTemplate ?? caseRow.title,
-    helper_request_template: helperTemplate,
-    category: caseRow.category,
-    urgency: caseRow.urgency,
+    title: body.title ?? summary.title,
+    public_summary: body.public_summary ?? summary.publicSummary,
+    helper_request_template: summary.helperRequestTemplate,
+    category: summary.category,
+    urgency: summary.urgency,
     campus_area: body.campus_area ?? null,
     preferred_time: body.preferred_time ?? null,
-    skill_tags: body.skill_tags ?? [],
-    safety_flags: safetyFlags,
-    diagnosis_snapshot: diagnosisSnapshot as Record<string, unknown>,
-    verdict_snapshot: verdictSnapshot as Record<string, unknown>,
-    action_plan_snapshot: actionPlanSnapshot as Record<string, unknown>,
+    skill_tags: body.skill_tags ?? summary.skillTags,
+    safety_flags: summary.safetyFlags,
+    verdict_label: summary.verdictLabel,
+    rrr_score: summary.rrrScore,
+    diagnosis_snapshot: {},
+    verdict_snapshot: {},
+    action_plan_snapshot: {},
     expires_at: body.expires_at ?? null,
   });
 

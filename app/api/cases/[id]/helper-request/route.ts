@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUserId } from "@/lib/auth/current-user";
+import { getRequestUserId } from "@/lib/auth/demo-user";
 import { createHelperRequestSchema } from "@/lib/schemas/community/helper-requests";
 import {
   escalateToHelperRequest,
 } from "@/lib/services/community/helper-request-service";
-import { store } from "@/lib/db/community/store";
+import { getCase } from "@/lib/db/queries/cases";
 
 export async function POST(
   req: NextRequest,
@@ -12,13 +12,16 @@ export async function POST(
 ) {
   try {
     const { id: caseId } = await params;
-    const userId = getCurrentUserId(req);
+    const userId = await getRequestUserId(req);
+    if (!userId) {
+      return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+    }
 
-    const caseRow = store.cases.get(caseId);
+    const caseRow = await getCase(caseId);
     if (!caseRow) {
       return NextResponse.json({ error: "case not found" }, { status: 404 });
     }
-    if (caseRow.user_id !== userId) {
+    if (caseRow.userId !== userId) {
       return NextResponse.json({ error: "forbidden" }, { status: 403 });
     }
 
@@ -31,7 +34,7 @@ export async function POST(
       );
     }
 
-    const result = escalateToHelperRequest(caseId, userId, parsed.data);
+    const result = await escalateToHelperRequest(caseId, userId, parsed.data);
     return NextResponse.json(result, { status: result.created ? 201 : 200 });
   } catch (err) {
     const e = err as { status?: number; message?: string };

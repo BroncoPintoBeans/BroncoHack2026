@@ -12,6 +12,8 @@ import type {
   FollowupResponse,
   GetCurrentResponse,
   GetEventsResponse,
+  PublishHelperRequestRequest,
+  PublishHelperRequestResponse,
 } from '@/lib/types/api'
 
 export class ApiError extends Error {
@@ -64,11 +66,24 @@ export function updateCase(id: string, body: UpdateCaseRequest): Promise<UpdateC
   })
 }
 
-export function createMedia(id: string, body: CreateMediaRequest): Promise<CreateMediaResponse> {
-  return apiFetch<CreateMediaResponse>(`/api/cases/${id}/media`, {
+export async function createMedia(id: string, body: CreateMediaRequest): Promise<CreateMediaResponse> {
+  const formData = new FormData()
+  formData.set('file', body.file)
+  const res = await fetch(`/api/cases/${id}/media`, {
     method: 'POST',
-    body: JSON.stringify(body),
+    body: formData,
   })
+  if (!res.ok) {
+    let message = res.statusText
+    try {
+      const payload = await res.json()
+      if (typeof payload?.error === 'string') message = payload.error
+    } catch {
+      // ignore parse failure
+    }
+    throw new ApiError(message, res.status)
+  }
+  return res.json() as Promise<CreateMediaResponse>
 }
 
 export function startRun(id: string): Promise<StartRunResponse> {
@@ -93,4 +108,14 @@ export function getCurrentCase(id: string): Promise<GetCurrentResponse> {
 
 export function getEvents(id: string): Promise<GetEventsResponse> {
   return apiFetch<GetEventsResponse>(`/api/cases/${id}/events`)
+}
+
+export function publishHelperRequest(
+  id: string,
+  body: PublishHelperRequestRequest,
+): Promise<PublishHelperRequestResponse> {
+  return apiFetch<PublishHelperRequestResponse>(`/api/cases/${id}/helper-request`, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
 }

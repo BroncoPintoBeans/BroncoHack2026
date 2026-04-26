@@ -13,6 +13,7 @@ export interface OrchestratorDeps {
   writeVerdict(caseId: string, runId: string, payload: EconomicsPayload): Promise<void>
   writeActionPlan(caseId: string, runId: string, payload: ActionPlanPayload): Promise<void>
   writeHelperRequest(caseId: string, runId: string, payload: HelperRoutingPayload): Promise<void>
+  writeCaseReport(caseId: string, runId: string): Promise<unknown>
   insertEvent(event: Omit<CaseEventRecord, 'id' | 'createdAt'>): Promise<CaseEventRecord>
 }
 
@@ -40,7 +41,22 @@ export async function runOrchestrator(input: OrchestratorInput): Promise<Orchest
     const intakePayload = await runIntake(ctx, caseRecord)
 
     // Diagnosis (may pause for user input)
-    const diagnosisResult = await runDiagnosis(ctx, caseRecord, intakePayload, followupAnswer)
+    let diagnosisResult = await runDiagnosis(ctx, caseRecord, intakePayload, followupAnswer, {
+      maxFollowupsReached: runRecord.followupCount >= 2,
+    })
+
+    if (diagnosisResult.awaitingUser && runRecord.followupCount >= 2) {
+      diagnosisResult = {
+        rootCause: `Best-effort diagnosis based on available evidence: ${caseRecord.symptoms}`,
+        confidence: 0.45,
+        safetyFlags: [],
+        technicianQuestions: [
+          'Diagnosis was completed after the maximum two follow-up rounds.',
+        ],
+        awaitingUser: false,
+      }
+      await ctx.emitEvent('diagnosis', 'complete', diagnosisResult)
+    }
 
     if (diagnosisResult.awaitingUser) {
       await input.updateRun(runId, {
@@ -69,6 +85,7 @@ export async function runOrchestrator(input: OrchestratorInput): Promise<Orchest
     await input.writeDiagnosis(caseId, runId, diagnosisPayload)
 
     await input.updateRun(runId, { status: 'complete', currentPhase: 'orchestrator' })
+    await input.writeCaseReport(caseId, runId)
     await ctx.emitEvent('orchestrator', 'complete')
 
     return { status: 'complete' }

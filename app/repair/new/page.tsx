@@ -11,15 +11,6 @@ import type { CaseCategory, Urgency } from '@/lib/types/agents'
 const MAX_MEDIA = 3
 const MAX_FILE_BYTES = 8 * 1024 * 1024 // 8 MB
 
-function fileToDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve(reader.result as string)
-    reader.onerror = () => reject(new Error('Failed to read file'))
-    reader.readAsDataURL(file)
-  })
-}
-
 const CATEGORIES: { value: CaseCategory; label: string; emoji: string }[] = [
   { value: 'laptop', label: 'Laptop', emoji: '💻' },
   { value: 'bicycle', label: 'Bicycle', emoji: '🚲' },
@@ -85,12 +76,11 @@ export default function NewRepairPage() {
         ...(quoteCents != null && !isNaN(quoteCents) ? { quoteCents } : {}),
       })
 
-      // Upload media files (if any) as data URLs
+      // Upload media files (if any) before starting analysis.
       if (mediaFiles.length > 0) {
         setSubmitPhase('uploading')
         for (const file of mediaFiles) {
-          const dataUrl = await fileToDataUrl(file)
-          await createMedia(newCase.id, { url: dataUrl, mediaType: 'image' })
+          await createMedia(newCase.id, { file })
         }
       }
 

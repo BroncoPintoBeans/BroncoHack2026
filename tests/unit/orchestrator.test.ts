@@ -33,6 +33,7 @@ function makeDeps(): OrchestratorDeps & { calls: Record<string, unknown[][]> } {
     writeVerdict: [],
     writeActionPlan: [],
     writeHelperRequest: [],
+    writeCaseReport: [],
     insertEvent: [],
   }
   let eventCounter = 0
@@ -52,6 +53,7 @@ function makeDeps(): OrchestratorDeps & { calls: Record<string, unknown[][]> } {
     writeVerdict: vi.fn(async (...args) => { calls.writeVerdict.push([...args]) }),
     writeActionPlan: vi.fn(async (...args) => { calls.writeActionPlan.push([...args]) }),
     writeHelperRequest: vi.fn(async (...args) => { calls.writeHelperRequest.push([...args]) }),
+    writeCaseReport: vi.fn(async (...args) => { calls.writeCaseReport.push([...args]) }),
     insertEvent,
   }
 }
@@ -68,6 +70,7 @@ describe('orchestrator', () => {
     expect(deps.writeVerdict).toHaveBeenCalledOnce()
     expect(deps.writeActionPlan).toHaveBeenCalledOnce()
     expect(deps.writeHelperRequest).toHaveBeenCalledOnce()
+    expect(deps.writeCaseReport).toHaveBeenCalledOnce()
 
     // orchestrator·complete event emitted
     const events = deps.calls.insertEvent.map(([e]) => e as { phase: string; status: string })

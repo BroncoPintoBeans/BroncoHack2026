@@ -80,6 +80,7 @@ export interface HelperRequestRow {
   id: string;
   case_id: string;
   run_id: string | null;
+  report_id: string | null;
   user_id: string;
   title: string;
   public_summary: string;
@@ -90,6 +91,8 @@ export interface HelperRequestRow {
   preferred_time: string | null;
   skill_tags: string[];
   safety_flags: string[];
+  verdict_label: string | null;
+  rrr_score: number | null;
   status: HelperRequestStatus;
   diagnosis_snapshot: Record<string, unknown>;
   verdict_snapshot: Record<string, unknown>;
