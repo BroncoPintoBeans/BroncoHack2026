@@ -77,4 +77,3 @@ where not exists (
     and existing.order_id is null
     and existing.case_id is null
 );
-

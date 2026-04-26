@@ -55,13 +55,6 @@ function scorePercent(item: RepairDashboardCase) {
   return Math.round(item.verdict.rrrScore * 100);
 }
 
-function estimateCents(item: RepairDashboardCase) {
-  const low = item.verdict?.repairLowCents ?? null;
-  const high = item.verdict?.repairHighCents ?? null;
-  if (low !== null && high !== null) return Math.round((low + high) / 2);
-  return low ?? item.quotedPriceCents;
-}
-
 function statusForRepairCase(item: RepairDashboardCase) {
   if (item.verdict && item.status === "complete") return statusStyles.complete;
   return statusStyles[item.status] ?? {
@@ -71,27 +64,9 @@ function statusForRepairCase(item: RepairDashboardCase) {
   };
 }
 
-function statsForCases(cases: RepairDashboardCase[]) {
-  const activeCount = cases.filter((item) => !["complete", "failed"].includes(item.status)).length;
-  const verdictCount = cases.filter((item) => item.verdict || item.status === "complete").length;
-  const estimates = cases.map(estimateCents).filter((value): value is number => value !== null);
-  const averageEstimate = estimates.length
-    ? Math.round(estimates.reduce((sum, value) => sum + value, 0) / estimates.length)
-    : null;
-  const co2SavedKg = verdictCount * 4;
-
-  return [
-    { label: "Active Cases", value: String(activeCount), bg: "bg-[#1b4332]", textColor: "text-white", subColor: "text-white/80" },
-    { label: "Verdicts Ready", value: String(verdictCount), bg: "bg-white", textColor: "text-[#012d1d]", subColor: "text-[#414844]" },
-    { label: "Avg. Repair Cost", value: formatMoney(averageEstimate) ?? "$0", bg: "bg-white", textColor: "text-[#1a1c18]", subColor: "text-[#414844]" },
-    { label: "CO2 Saved (est.)", value: `${co2SavedKg}kg`, bg: "bg-[#e2e3db]", textColor: "text-[#1b4332]", subColor: "text-[#414844]" },
-  ];
-}
-
 export default async function DashboardPage() {
   const user = await getUser();
   const cases = user ? await listRepairDashboardCases() : [];
-  const stats = statsForCases(cases);
 
   return (
     <div className="min-h-screen bg-[#f9faf2]">
@@ -104,19 +79,9 @@ export default async function DashboardPage() {
             <h1 className="font-bold text-[#012d1d] text-[32px] tracking-[-0.64px]">Repair Dashboard</h1>
             <p className="text-[#414844] text-lg mt-1">Track your active repair cases and verdicts.</p>
           </div>
-          <Link href="/repair/new" className="bg-[#1b4332] text-white text-xs font-semibold tracking-[0.6px] px-6 py-3 rounded-full shadow-[0px_4px_6px_rgba(27,67,50,0.15)] hover:bg-[#012d1d] transition-colors">
+          <Link href="/repair/new" className="bg-[#1b4332] text-white text-sm font-semibold tracking-[0.6px] px-6 py-3 rounded-lg hover:bg-[#012d1d] transition-colors">
             + New Repair Case
           </Link>
-        </div>
-
-        {/* Stats Row */}
-        <div className="grid grid-cols-4 gap-4">
-          {stats.map((stat) => (
-            <div key={stat.label} className={`${stat.bg} rounded-xl p-6 shadow-[0px_4px_10px_rgba(27,67,50,0.06)]`}>
-              <p className={`font-bold text-3xl ${stat.textColor}`}>{stat.value}</p>
-              <p className={`text-sm mt-1 ${stat.subColor}`}>{stat.label}</p>
-            </div>
-          ))}
         </div>
 
         {/* Cases List */}

@@ -8,7 +8,7 @@ const MAX_MODEL_NUMBER_LENGTH = 120
 const MAX_INT32 = 2_147_483_647
 
 const CreateCaseSchema = z.object({
-  category: z.enum(['laptop', 'bicycle', 'scooter', 'mini_fridge']),
+  category: z.enum(['electronics', 'clothing', 'furniture', 'misc', 'laptop', 'bicycle', 'scooter', 'mini_fridge']),
   symptoms: z.string().trim().min(1).max(MAX_TEXT_LENGTH),
   urgency: z.enum(['low', 'normal', 'urgent']).default('normal'),
   modelNumber: z.string().trim().max(MAX_MODEL_NUMBER_LENGTH).optional(),

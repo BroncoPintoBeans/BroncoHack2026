@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-export const CaseCategorySchema = z.enum(['laptop', 'bicycle', 'scooter', 'mini_fridge'])
+export const CaseCategorySchema = z.enum(['electronics', 'clothing', 'furniture', 'misc', 'laptop', 'bicycle', 'scooter', 'mini_fridge'])
 export const AgentPhaseSchema = z.enum(['intake', 'diagnosis', 'economics', 'action_plan', 'helper_routing', 'orchestrator'])
 export const PhaseStatusSchema = z.enum(['started', 'complete', 'failed', 'awaiting_user'])
 export const VerdictLabelSchema = z.enum(['repair_now', 'repair_if_cheap', 'wait_monitor', 'replace_soon', 'replace_now'])
