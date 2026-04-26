@@ -153,7 +153,7 @@ export function buildCampusLocationLink(location: CampusLocation): {
 Rules:
 
 - Use query/search URLs for V1 unless verified marker IDs exist.
-- If `concept3dMarkerId` is absent, label marker opening as best-effort.
+- If `location.concept3d.markerId` is absent, label marker opening as best-effort.
 - Every component rendering an iframe must render a visible text link to the same map destination and readable directions beside or below the iframe.
 - URL helpers should be unit-tested because they are easy to regress and affect every CTA.
 

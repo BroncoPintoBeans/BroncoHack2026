@@ -218,7 +218,7 @@ Negative cases:
 - Reverse-direction trips return `recommended: false` unless a later branch explicitly adds reverse-direction copy.
 - Same-area trips return `recommended: false`.
 - Unknown locations return `recommended: false`.
-- All trips outside the two active V1 route pairs return `recommended: false`; do not add a direct-walk minute threshold in V1.
+- All trips outside the two active V1 route pairs return `recommended: false`; do not add a direct-walk minute rule in V1.
 
 Expected V1 cases:
 
@@ -354,7 +354,7 @@ Steps:
 3. Implement `getShuttleRecommendation({ pickupId, destinationId })`.
 4. Return the exact positive shape for `village` -> `ilab-building-1-room-113`.
 5. Return the exact negative shape for short, same-area, and unknown-location trips, with non-null route and stop IDs plus zeroed estimate fields.
-6. Add tests for route ID, stop names, source URL, estimate values, and threshold behavior.
+6. Add tests for route ID, stop names, source URL, estimate values, allowlisted positive cases, and non-allowlisted negative cases.
 
 ### Task 3: Add Optional Concept3D Public-Data Helpers
 
@@ -403,7 +403,7 @@ Steps:
 | Test | Expected assertion |
 |---|---|
 | Location fixture completeness | All three canonical IDs resolve. |
-| Campus-area threshold | `village` -> `ilab-building-1-room-113` recommends shuttle. |
+| Allowlisted iLab trip | `village` -> `ilab-building-1-room-113` recommends shuttle. |
 | Short walk suppression | `student-services-building` -> `ilab-building-1-room-113` does not recommend shuttle. |
 | Route facts | Route ID, name, from stop, to stop, and source URL match the canonical contract. |
 | Estimate labeling | UI displays estimated ride and walk time, not live ETA. |
@@ -415,4 +415,4 @@ Steps:
 
 This plan is compatible with separate worktrees because it creates new `lib/campus/**` modules and a self-contained UI card contract. Shared implementation workers should not modify `lib/types/**` just to support V1; the shuttle recommendation type can live in `lib/campus/shuttle-routes.ts` until the shape is frozen by implementation.
 
-If another worktree adds route selection or campus map work, it should consume `getShuttleRecommendation` rather than duplicate the threshold or hardcoded route facts.
+If another worktree adds route selection or campus map work, it should consume `getShuttleRecommendation` rather than duplicate the allowlist or hardcoded route facts.
