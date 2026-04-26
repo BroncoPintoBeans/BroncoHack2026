@@ -3,6 +3,7 @@ import { demoStore } from '../demo-store'
 import { getCase } from './cases'
 import { getCurrentRun } from './runs'
 import { listEvents } from './events'
+import { getLatestCaseReport } from './reports'
 import type { CurrentCaseOutput } from '../../types/case'
 import type { DiagnosisCompletePayload, EconomicsPayload, ActionPlanPayload, HelperMatch } from '../../types/payloads'
 import {
@@ -23,6 +24,7 @@ export async function getCurrentCaseOutput(caseId: string): Promise<CurrentCaseO
 
     const currentRun = await getCurrentRun(caseId)
     const events = await listEvents(caseId)
+    const report = await getLatestCaseReport(caseId)
 
     // Load outputs for current run
     let diagnosis: DiagnosisCompletePayload | undefined
@@ -81,7 +83,7 @@ export async function getCurrentCaseOutput(caseId: string): Promise<CurrentCaseO
       }
     }
 
-    return { case: caseRecord, currentRun: currentRun ?? undefined, diagnosis, verdict, actionPlan, helperMatches, events }
+    return { case: caseRecord, currentRun: currentRun ?? undefined, diagnosis, verdict, actionPlan, helperMatches, report: report ?? undefined, events }
   }
 
   // Demo-store path
@@ -96,6 +98,7 @@ export async function getCurrentCaseOutput(caseId: string): Promise<CurrentCaseO
   const actionPlan = demoStore.actionPlans.get(caseId)
   const helperRequest = demoStore.helperRequests.get(caseId)
   const helperMatches = helperRequest?.matches
+  const report = await getLatestCaseReport(caseId)
 
-  return { case: caseRecord, currentRun, diagnosis, verdict, actionPlan, helperMatches, events }
+  return { case: caseRecord, currentRun, diagnosis, verdict, actionPlan, helperMatches, report: report ?? undefined, events }
 }

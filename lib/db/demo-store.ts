@@ -1,6 +1,6 @@
 import { DEMO_CASES } from '../../tests/fixtures/demo-cases'
 import { DEMO_LAPTOP_EVENTS } from '../../tests/fixtures/demo-events'
-import type { CaseRecord, CaseRunRecord, CaseEventRecord } from '../types/case'
+import type { CaseRecord, CaseRunRecord, CaseEventRecord, CaseReportRecord } from '../types/case'
 import type {
   DiagnosisCompletePayload,
   EconomicsPayload,
@@ -18,6 +18,9 @@ export interface DemoStore {
   verdicts: Map<string, EconomicsPayload>
   actionPlans: Map<string, ActionPlanPayload>
   helperRequests: Map<string, HelperRoutingPayload>
+  caseReports: Map<string, CaseReportRecord>
+  caseReportsByRunId: Map<string, string>
+  caseReportsByCaseId: Map<string, string>
   rewardLedger: Map<string, RewardLedgerRecord[]>
 }
 
@@ -31,6 +34,9 @@ function createStore(): DemoStore {
     verdicts: new Map(),
     actionPlans: new Map(),
     helperRequests: new Map(),
+    caseReports: new Map(),
+    caseReportsByRunId: new Map(),
+    caseReportsByCaseId: new Map(),
     rewardLedger: new Map(),
   }
 
