@@ -59,6 +59,7 @@ export default function Concept3DMapPanel({
         <iframe
           title={`CPP campus map for ${location.name}`}
           src={iframeSrc}
+          tabIndex={-1}
           className="h-[360px] w-full bg-white sm:h-[440px] lg:h-[520px]"
           loading="lazy"
         />

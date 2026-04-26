@@ -4,10 +4,7 @@ import { useMemo, useState } from "react";
 import Concept3DMapPanel from "@/components/campus-map/Concept3DMapPanel";
 import DirectionsPanel from "@/components/campus-map/DirectionsPanel";
 import LocationList from "@/components/campus-map/LocationList";
-import {
-  CPP_CONCEPT3D_BASE_URL,
-  buildTextMapFallback,
-} from "@/lib/campus/concept3d";
+import { CPP_CONCEPT3D_BASE_URL } from "@/lib/campus/concept3d";
 import {
   type CampusLocation,
   type CampusLocationId,
@@ -209,16 +206,16 @@ export default function CampusMapClient({
                 No campus locations matched &quot;{searchText}&quot;.
               </p>
               <p className="mt-1">
-                Use the official CPP map search for this typed text, or clear
+                Search for &quot;{searchText}&quot; in the official CPP map, or clear
                 the search to return to the campus list.
               </p>
               <a
-                href={buildTextMapFallback(null)}
+                href={CPP_CONCEPT3D_BASE_URL}
                 target="_blank"
                 rel="noreferrer"
                 className="mt-2 inline-flex font-semibold text-[#1b4332] underline underline-offset-4"
               >
-                Search CPP map for &quot;{searchText}&quot;
+                Open official CPP map to search manually
               </a>
             </div>
           ) : null}
