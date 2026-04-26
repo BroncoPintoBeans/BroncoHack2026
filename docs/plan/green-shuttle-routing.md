@@ -205,25 +205,20 @@ Required negative output shape:
 }
 ```
 
-## Recommendation Threshold
+## Recommendation Allowlist
 
-Use a deterministic threshold so backend, frontend, and tests agree.
+Use a deterministic V1 allowlist so backend, frontend, and tests agree.
 
-Primary rule:
+Active V1 rule:
 
 - Recommend the demo shuttle only for `village` -> `ilab-building-1-room-113` and `village` -> `student-services-building`.
 
-Secondary rule:
+Negative cases:
 
-- If both locations include approximate walk data, recommend when the direct walk estimate is `>= 12` minutes.
-
-Tie-breaking:
-
-- The explicit V1 route-pair allowlist wins for known V1 IDs.
-- The approximate-walk rule is only a future fallback and must not add visible V1 shuttle cards outside the allowlist.
-- Same-area trips return `recommended: false`.
 - Reverse-direction trips return `recommended: false` unless a later branch explicitly adds reverse-direction copy.
+- Same-area trips return `recommended: false`.
 - Unknown locations return `recommended: false`.
+- All trips outside the two active V1 route pairs return `recommended: false`; do not add a direct-walk minute threshold in V1.
 
 Expected V1 cases:
 

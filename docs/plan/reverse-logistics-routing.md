@@ -32,7 +32,9 @@ Create these hardcoded modules in implementation worktrees:
 | `lib/campus/reverse-logistics.ts` | Deterministic item-to-destination rules, priority order, explanation copy, and output assembly. |
 | `lib/campus/shuttle-routes.ts` | Public shuttle-route hints if shown near recommendations. V1 should keep this independent from recommendation correctness. |
 
-Canonical location IDs:
+Reverse-logistics destination IDs:
+
+These are a reverse-logistics subset of the seven canonical campus location IDs defined in `docs/plan/campus-location-contract.md`. The full registry also includes `village` and `student-services-building` for pickup and shuttle-stop behavior; this routing module must consume the full registry rather than creating a separate five-location model.
 
 | ID | Planning role |
 |---|---|

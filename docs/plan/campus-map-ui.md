@@ -246,9 +246,10 @@ Modify the existing step 2 pickup field flow:
 - Add a campus-location picker above or beside the free-text input.
 - Selecting a known location sets both:
   - `pickupLocationId = location.id`
-  - `pickupLocation = location.pickupLocationText`
+  - `pickupLocation = location.name`
+- If UI needs a shorter display string, derive it with a helper from the canonical registry rather than adding a second location field.
 - Editing the text after choosing a known location should either:
-  - keep the ID if the text still equals that location's `pickupLocationText`, or
+  - keep the ID if the text still equals `location.name` or the derived display helper output for that canonical location, or
   - clear the ID when the text no longer matches.
 - Add a `Custom campus location` option that focuses the text input and clears `pickupLocationId`.
 - Publish payload should include text exactly as today and include optional ID only when the database/API contract supports `pickup_location_id`.
@@ -306,7 +307,7 @@ Apply the same picker behavior to `app/marketplace/[id]/edit/page.tsx`:
 - Map iframe has a descriptive `title`, such as `CPP campus map centered on Bronco Bookstore`.
 - The iframe is not the only way to use the feature. Render the official fallback URL as readable link text and include plain-language directions.
 - If the iframe fails, is blocked, or is hidden on small screens, the fallback link and directions remain visible.
-- Shuttle recommendations include route text in normal prose, for example: `Take Route A from Student Services to Library, then walk about 4 minutes.`
+- Shuttle recommendations include only V1 demo route prose, for example: `The Village -> Student Services Building -> walk to Building 1/iLab`, with 8 minute ride and 4 minute walk estimates labeled as estimates only.
 - Focus order should move from filters to selected-location summary to map/fallback actions to location results.
 - Avoid hover-only controls. Every CTA must be reachable and understandable by keyboard and screen reader.
 - Use readable text contrast on green shuttle cards; do not put muted gray text on green backgrounds.
@@ -413,7 +414,7 @@ Steps:
 Minimum test coverage for the implementation workers:
 
 - `concept3d.test.ts`: map ID `1130`, encoded search links, fallback URL generation, no marker-specific URL when marker ID is missing.
-- `locations.test.ts`: all seven canonical IDs exist, every location has `pickupLocationText`, `directionsText`, `concept3dQuery`, and a safety note.
+- `locations.test.ts`: all seven canonical IDs exist, every location has `name`, `types`, `campusArea`, `concept3d`, `directions`, and `accessibilityNote`; optional UI display helpers must derive from this canonical registry.
 - `reverse-logistics.test.ts`: default recommendation returns a known public meetup, category/repair inputs return deterministic IDs, unknown inputs do not throw.
 - `shuttle-routes.test.ts`: helper returns the exact shared shuttle shape, including `recommended`, non-null route/stop IDs, numeric estimate fields, and `sourceUrl`.
 - Create/edit manual smoke: selecting a known location populates text and ID; editing text clears ID; custom text still passes validation.

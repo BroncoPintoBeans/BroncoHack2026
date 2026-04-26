@@ -33,8 +33,8 @@ This feature is additive to Marketplace. It does not replace listing pickup text
 
 ## Demo Story
 
-1. A student at `village` has an old desktop tower listed in Marketplace with `pickupLocation: "The Village"` and optional `pickupLocationId: "village"`.
-2. The item category routes as `electronics/server-computing`, so the reverse-logistics card recommends IT guidance first.
+1. A student at `village` has a broken project enclosure listed in Marketplace with `pickupLocation: "The Village"` and optional `pickupLocationId: "village"`.
+2. The item category routes as `mechanical/material/project`, so the reverse-logistics card recommends iLab guidance first.
 3. The map shows the item origin, recommended campus destination, and a Green Shuttle suggestion.
 4. The demo route `main-campus-village-demo` shows:
    - The Village
@@ -194,7 +194,15 @@ Shared-file policy:
 
 ## Task Sequencing
 
-1. Lock the six campus planning docs enough for field names, module exports, authority, worktree ownership, and UI fallback language. This Stage 1 contract-lock work happens on `feat/map-main`; implementation lanes must fan out only from the resulting commit SHA.
+Stage 1 contract-lock commit on `feat/map-main`:
+
+```text
+acd8a2d84d762aaf73575241f399f7264b1883e8
+```
+
+Implementation lanes must fan out from this SHA before Stage 2 starts.
+
+1. Lock the six campus planning docs enough for field names, module exports, authority, worktree ownership, and UI fallback language. This Stage 1 contract-lock work happened on `feat/map-main`.
 2. Add `lib/campus/locations.ts` with the seven canonical IDs and lookup helpers.
 3. Add `pickupLocationId?: string` to listing types, fixtures, and seed data without changing `pickupLocation`.
 4. Add `lib/campus/reverse-logistics.ts` with deterministic recommendations.
@@ -211,7 +219,7 @@ Shared-file policy:
 - If `platform-feature-contracts.md` conflicts with this doc on Marketplace table/API ownership, `platform-feature-contracts.md` wins.
 - If `architecture.md` conflicts with this doc on repo ownership, freeze protocol, or cut rules, `architecture.md` wins.
 - Subsystem docs may add fields, helper functions, UI states, and test cases, but they must keep the canonical IDs and optional listing field policy.
-- Implementation worktrees must branch from the `feat/map-main` contract-lock commit SHA recorded by the Task 1 commit, then use the lane worktree paths from `docs/superpowers/specs/2026-04-26-campus-location-orchestration-design.md`.
+- Implementation worktrees must branch from the `feat/map-main` contract-lock commit SHA `acd8a2d84d762aaf73575241f399f7264b1883e8`, then use the lane worktree paths from `docs/superpowers/specs/2026-04-26-campus-location-orchestration-design.md`.
 - Public copy must distinguish "recommended destination" from "guaranteed dropoff accepted here."
 - Shuttle copy must distinguish "estimated route" from "live shuttle arrival."
 
