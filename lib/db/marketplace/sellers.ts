@@ -298,7 +298,7 @@ export async function getSellerProfileData(
     totalReviews: reviewSummary.totalReviews,
     activeListings,
     reviews: reviewSummary.reviews,
-    canReview: Boolean(viewerId && hasInteraction && !existingReview),
+    canReview: Boolean(viewerId && viewerId !== sellerId && !existingReview),
     hasInteraction,
     existingReview,
   };
@@ -319,18 +319,7 @@ export async function createSellerReview(input: {
     throw error;
   }
 
-  const [canInteract, profile] = await Promise.all([
-    hasSellerInteraction(reviewerId, sellerId),
-    getSellerProfileData(sellerId, reviewerId),
-  ]);
-
-  if (!canInteract) {
-    const error = new Error(
-      "you can only review sellers after both of you message each other"
-    ) as Error & { status?: number };
-    error.status = 403;
-    throw error;
-  }
+  const profile = await getSellerProfileData(sellerId, reviewerId);
 
   if (profile.existingReview) {
     const error = new Error("you already reviewed this seller") as Error & {

@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import {
   MESSAGE_SEEN_EVENT,
@@ -12,7 +12,6 @@ import type { User } from "@supabase/supabase-js";
 
 const navLinks = [
   { href: "/marketplace", label: "Marketplace" },
-  { href: "/messages", label: "Chats" },
   { href: "/repair/case-84920", label: "Repair Guide" },
   { href: "/support", label: "Support" },
   { href: "/rewards", label: "Impact" },
@@ -27,6 +26,7 @@ type MessageStatusRow = {
 
 export default function Navbar() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [user, setUser] = useState<User | null>(null);
   const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
 
@@ -119,6 +119,8 @@ export default function Navbar() {
 
   const displayName = user?.user_metadata?.full_name ?? user?.email?.split("@")[0] ?? null;
   const messagesActive = pathname.startsWith("/messages");
+  const bookmarksActive =
+    pathname.startsWith("/marketplace") && searchParams.get("saved") === "1";
 
   return (
     <header className="sticky top-0 z-50 bg-[#f8f9f1] border-b border-[#e5e7eb]">
@@ -150,7 +152,9 @@ export default function Navbar() {
           <Link
             href="/messages"
             className={`relative flex h-10 w-10 items-center justify-center rounded-full transition-colors ${
-              messagesActive ? "bg-[#dce7df] text-[#1b4332]" : "hover:bg-[#e2e3db] text-[#1a1c18]"
+              messagesActive
+                ? "bg-[#dce7df] text-[#1b4332]"
+                : "hover:bg-[#e2e3db] text-[#1a1c18]"
             }`}
             aria-label="Messages"
           >
@@ -171,10 +175,22 @@ export default function Navbar() {
             ) : null}
           </Link>
           <Link
-            href="/repair/case-84920"
-            className="bg-[#1b4332] text-white text-xs font-semibold font-['Work_Sans',sans-serif] tracking-[0.6px] px-4 py-2 rounded-lg hover:bg-[#012d1d] transition-colors"
+            href="/marketplace?saved=1"
+            className={`relative flex h-10 w-10 items-center justify-center rounded-full transition-colors ${
+              bookmarksActive ? "bg-[#dce7df] text-[#1b4332]" : "hover:bg-[#e2e3db] text-[#1a1c18]"
+            }`}
+            aria-label="Saved products"
+            title="Saved products"
           >
-            Start Repair
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+              <path
+                d="M6.667 3.333h6.666a1.667 1.667 0 0 1 1.667 1.667v11.667l-5-2.5-5 2.5V5a1.667 1.667 0 0 1 1.667-1.667Z"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
           </Link>
           {user ? (
             <div className="flex items-center gap-3">

@@ -2,11 +2,12 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import BackButton from "@/components/BackButton";
 import Navbar from "@/components/Navbar";
 import { createClient } from "@/lib/supabase/client";
 import type { MarketplaceListing } from "@/lib/db/marketplace/listings";
+import { marketplaceCategoryLabels } from "@/lib/marketplace/categories";
 
 interface MarketplaceGridClientProps {
   initialItems: MarketplaceListing[];
@@ -127,6 +128,7 @@ function readWishlistIds() {
 
 export default function MarketplaceGridClient({ initialItems }: MarketplaceGridClientProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [userId, setUserId] = useState<string | null>(null);
   const [myListings, setMyListings] = useState<MarketplaceListing[]>([]);
   const [query, setQuery] = useState("");
@@ -134,6 +136,7 @@ export default function MarketplaceGridClient({ initialItems }: MarketplaceGridC
   const [tab, setTab] = useState("All");
   const [sort, setSort] = useState("newest");
   const [wishlist, setWishlist] = useState<string[]>([]);
+  const showSavedOnly = searchParams.get("saved") === "1";
 
   useEffect(() => {
     const timer = window.setTimeout(() => setWishlist(readWishlistIds()), 0);
@@ -167,8 +170,8 @@ export default function MarketplaceGridClient({ initialItems }: MarketplaceGridC
   }, [wishlist]);
 
   const types = useMemo(
-    () => ["All", ...Array.from(new Set(initialItems.map((item) => item.category))).sort()],
-    [initialItems]
+    () => ["All", ...marketplaceCategoryLabels.map((category) => category.label)],
+    []
   );
 
   const sellerMatches = useMemo(() => {
@@ -177,7 +180,12 @@ export default function MarketplaceGridClient({ initialItems }: MarketplaceGridC
 
     const bySeller = new Map<
       string,
-      { sellerId: string; sellerName: string; listingTitles: string[]; listingCount: number }
+      {
+        sellerId: string;
+        sellerName: string;
+        listingTitles: string[];
+        listingCount: number;
+      }
     >();
 
     for (const item of initialItems) {
@@ -189,20 +197,37 @@ export default function MarketplaceGridClient({ initialItems }: MarketplaceGridC
         bySeller.get(item.sellerId) ??
         { sellerId: item.sellerId, sellerName, listingTitles: [], listingCount: 0 };
       existing.listingCount += 1;
-      if (item.title) existing.listingTitles.push(item.title);
+      if (item.title) {
+        existing.listingTitles.push(item.title);
+      }
       bySeller.set(item.sellerId, existing);
     }
 
     return [...bySeller.values()]
       .map((seller) => ({
         ...seller,
-        listingTitles: [...new Set(seller.listingTitles)].slice(0, 3),
+        listingTitles: [...new Set(seller.listingTitles)].slice(0, 5),
       }))
       .sort((a, b) => b.listingCount - a.listingCount || a.sellerName.localeCompare(b.sellerName));
   }, [initialItems, query]);
 
   const filtered = useMemo(() => {
     let out = [...initialItems];
+
+    if (showSavedOnly) {
+      const savedItems = out.filter((item) => wishlist.includes(item.id));
+      if (sort === "oldest") {
+        savedItems.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+      }
+      if (sort === "newest") {
+        savedItems.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      }
+      if (sort === "price-asc") savedItems.sort((a, b) => (a.price ?? 0) - (b.price ?? 0));
+      if (sort === "price-desc") savedItems.sort((a, b) => (b.price ?? 0) - (a.price ?? 0));
+      if (sort === "eco") savedItems.sort((a, b) => computeEcoTokens(b) - computeEcoTokens(a));
+      return savedItems;
+    }
+
     const normalizedQuery = query.trim().toLowerCase();
 
     if (normalizedQuery) {
@@ -235,7 +260,9 @@ export default function MarketplaceGridClient({ initialItems }: MarketplaceGridC
     if (sort === "price-desc") out.sort((a, b) => (b.price ?? 0) - (a.price ?? 0));
     if (sort === "eco") out.sort((a, b) => computeEcoTokens(b) - computeEcoTokens(a));
     return out;
-  }, [initialItems, query, type, tab, sort]);
+  }, [initialItems, query, type, tab, sort, showSavedOnly, wishlist]);
+  const hasSellerMatches = query.trim().length > 0 && sellerMatches.length > 0;
+  const hasProductMatches = filtered.length > 0;
 
   function toggleWishlist(id: string) {
     setWishlist((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]));
@@ -246,26 +273,12 @@ export default function MarketplaceGridClient({ initialItems }: MarketplaceGridC
       <Navbar />
       <main className="max-w-[1280px] mx-auto px-6 py-12 flex flex-col gap-8">
         <BackButton fallbackHref="/" label="Back to Home" alwaysNavigate />
-        <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-col gap-5">
           <div>
             <h1 className="font-bold text-[#012d1d] text-[32px] tracking-[-0.64px] leading-tight">
               Marketplace
             </h1>
             <p className="text-[#414844] text-lg mt-1">Give items a second life on campus.</p>
-          </div>
-          <div className="flex flex-wrap gap-4">
-            <Link
-              href="/dashboard"
-              className="flex items-center gap-2 bg-[#e8e9e1] text-[#1a1c18] text-xs font-semibold tracking-[0.6px] px-6 py-3 rounded-full hover:bg-[#d8d9d1] transition-colors"
-            >
-              My Listings
-            </Link>
-            <Link
-              href="/create-listing"
-              className="flex items-center gap-2 bg-[#1b4332] text-white text-xs font-semibold tracking-[0.6px] px-6 py-3 rounded-full shadow-[0px_4px_6px_rgba(27,67,50,0.15)] hover:bg-[#012d1d] transition-colors"
-            >
-              List an Item
-            </Link>
           </div>
         </div>
 
@@ -285,55 +298,59 @@ export default function MarketplaceGridClient({ initialItems }: MarketplaceGridC
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           <section className="lg:col-span-9 flex flex-col gap-6">
-            <div className="flex flex-wrap items-center gap-4">
-              <input
-                aria-label="Search"
-                className="bg-white border border-[#c1c8c2] rounded-full px-4 py-2.5 text-sm text-[#1a1c18] w-full sm:w-64 outline-none focus:border-[#1b4332]"
-                placeholder="Search for listings or users"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-              />
-              <select
-                className="border border-[#c1c8c2] rounded-full px-4 py-2 text-xs font-semibold text-[#414844] tracking-[0.6px] bg-white"
-                value={type}
-                onChange={(event) => setType(event.target.value)}
-              >
-                {types.map((itemType) => (
-                  <option key={itemType} value={itemType}>
-                    {itemType === "All" ? "Category" : itemType}
-                  </option>
-                ))}
-              </select>
-              <select
-                className="border border-[#c1c8c2] rounded-full px-4 py-2 text-xs font-semibold text-[#414844] tracking-[0.6px] bg-white"
-                value={sort}
-                onChange={(event) => setSort(event.target.value)}
-              >
-                <option value="newest">Sort: Newest</option>
-                <option value="oldest">Sort: Oldest</option>
-                <option value="price-asc">Price: Low to High</option>
-                <option value="price-desc">Price: High to Low</option>
-                <option value="eco">Eco Tokens</option>
-              </select>
-              <button
-                onClick={() => setTab("Repairable")}
-                className={`border rounded-full px-4 py-2 text-xs font-semibold tracking-[0.6px] ${
-                  tab === "Repairable"
-                    ? "bg-[#1b4332] border-[#1b4332] text-white"
-                    : "bg-[#e8e9e1] border-[#c1c8c2] text-[#1a1c18]"
-                }`}
-              >
-                Repair Needed
-              </button>
-            </div>
+            {!showSavedOnly ? (
+              <div className="flex flex-wrap items-center gap-4">
+                <input
+                  aria-label="Search"
+                  className="bg-white border border-[#c1c8c2] rounded-full px-4 py-2.5 text-sm text-[#1a1c18] w-full sm:w-64 outline-none focus:border-[#1b4332]"
+                  placeholder="Search for listings or users"
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                />
+                <select
+                  className="border border-[#c1c8c2] rounded-full px-4 py-2 text-xs font-semibold text-[#414844] tracking-[0.6px] bg-white"
+                  value={type}
+                  onChange={(event) => setType(event.target.value)}
+                >
+                  {types.map((itemType) => (
+                    <option key={itemType} value={itemType}>
+                      {itemType === "All" ? "Category" : itemType}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  className="border border-[#c1c8c2] rounded-full px-4 py-2 text-xs font-semibold text-[#414844] tracking-[0.6px] bg-white"
+                  value={sort}
+                  onChange={(event) => setSort(event.target.value)}
+                >
+                  <option value="newest">Sort: Newest</option>
+                  <option value="oldest">Sort: Oldest</option>
+                  <option value="price-asc">Price: Low to High</option>
+                  <option value="price-desc">Price: High to Low</option>
+                  <option value="eco">Eco Tokens</option>
+                </select>
+                <button
+                  onClick={() => setTab("Repairable")}
+                  className={`border rounded-full px-4 py-2 text-xs font-semibold tracking-[0.6px] ${
+                    tab === "Repairable"
+                      ? "bg-[#1b4332] border-[#1b4332] text-white"
+                      : "bg-[#e8e9e1] border-[#c1c8c2] text-[#1a1c18]"
+                  }`}
+                >
+                  Repair Needed
+                </button>
+              </div>
+            ) : null}
 
-            {filtered.length === 0 ? (
+            {!hasSellerMatches && !hasProductMatches ? (
               <div className="bg-white border border-[#e2e3db] rounded-xl p-8 text-[#414844]">
-                No marketplace listings match those filters.
+                {showSavedOnly
+                  ? "No bookmarked items."
+                  : "No sellers or marketplace listings match that search."}
               </div>
             ) : (
               <div className="flex flex-col gap-6">
-                {query.trim() && sellerMatches.length > 0 ? (
+                {!showSavedOnly && hasSellerMatches ? (
                   <section className="bg-white border border-[#e2e3db] rounded-xl p-5">
                     <p className="text-xs font-semibold tracking-[0.6px] text-[#717973] uppercase">
                       Sellers
@@ -358,10 +375,15 @@ export default function MarketplaceGridClient({ initialItems }: MarketplaceGridC
                                 {seller.listingCount === 1 ? "listing" : "listings"}
                               </p>
                               {seller.listingTitles.length > 0 ? (
-                                <p className="mt-2 text-xs text-[#414844]">
-                                  {seller.listingTitles.join(" • ")}
-                                  {seller.listingCount > seller.listingTitles.length ? " • …" : ""}
-                                </p>
+                                <div className="mt-2">
+                                  <p className="text-[11px] font-semibold uppercase tracking-[0.5px] text-[#717973]">
+                                    Listings
+                                  </p>
+                                  <p className="mt-1 text-xs text-[#414844]">
+                                    {seller.listingTitles.join(" • ")}
+                                    {seller.listingCount > seller.listingTitles.length ? " • …" : ""}
+                                  </p>
+                                </div>
                               ) : null}
                             </div>
                           </div>
@@ -371,8 +393,13 @@ export default function MarketplaceGridClient({ initialItems }: MarketplaceGridC
                   </section>
                 ) : null}
 
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                  {filtered.map((item) => {
+                {hasProductMatches ? (
+                  <section className="flex flex-col gap-4">
+                    <p className="text-xs font-semibold tracking-[0.6px] text-[#717973] uppercase">
+                      Products
+                    </p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                    {filtered.map((item) => {
                     const categoryKey = formatCategoryKey(item.category);
                     const saved = wishlist.includes(item.id);
 
@@ -395,9 +422,6 @@ export default function MarketplaceGridClient({ initialItems }: MarketplaceGridC
                                 No photo
                               </div>
                             )}
-                            <span className="absolute top-3 left-3 backdrop-blur-sm bg-white/90 text-[#012d1d] text-[10px] font-bold tracking-[1px] px-2 py-1 rounded">
-                              Recirculated
-                            </span>
                             <button
                               onClick={(event) => {
                                 event.stopPropagation();
@@ -480,92 +504,81 @@ export default function MarketplaceGridClient({ initialItems }: MarketplaceGridC
                         </div>
                       </div>
                     );
-                  })}
-                </div>
+                    })}
+                    </div>
+                  </section>
+                ) : (
+                  <div className="bg-white border border-[#e2e3db] rounded-xl p-6 text-[#414844] text-sm">
+                    No products match that search, but seller matches are shown above.
+                  </div>
+                )}
               </div>
             )}
 
-            <div className="bg-[#012d1d] rounded-xl py-6 px-8 md:px-20 flex flex-col sm:flex-row items-center justify-between gap-6 shadow-[0px_4px_6px_rgba(27,67,50,0.2)]">
-              <div className="flex flex-col items-center gap-1">
-                <span className="font-bold text-white text-[32px] tracking-[-0.64px]">
-                  {initialItems.length.toLocaleString()}
-                </span>
-                <span className="font-semibold text-[#a5d0b9] text-xs tracking-[0.6px] uppercase">
-                  Live Listings
-                </span>
-              </div>
-              <div className="hidden sm:block bg-[rgba(193,236,212,0.3)] w-px h-16" />
-              <div className="flex flex-col items-center gap-1">
-                <span className="font-bold text-white text-[32px] tracking-[-0.64px]">
-                  {wishlist.length.toLocaleString()}
-                </span>
-                <span className="font-semibold text-[#f0bd8b] text-xs tracking-[0.6px] uppercase">
-                  Saved Items
-                </span>
-              </div>
-            </div>
           </section>
 
-          <aside className="lg:col-span-3">
-            <div className="bg-[#f3f4ec] border border-[rgba(193,200,194,0.2)] rounded-xl p-6 flex flex-col gap-6 shadow-[0px_1px_1px_rgba(0,0,0,0.05)]">
-              <div className="flex items-center gap-2">
-                <h2 className="font-semibold text-[#1a1c18] text-xl">My Activity</h2>
-              </div>
-              <div className="flex flex-col gap-2">
-                <div className="flex items-baseline justify-between">
-                  <span className="font-semibold text-[#414844] text-xs tracking-[0.6px]">
-                    Active Listings
-                  </span>
-                  <span className="font-semibold text-[#012d1d] text-2xl">
-                    {myListings.length}
-                  </span>
+          {!showSavedOnly ? (
+            <aside className="lg:col-span-3">
+              <div className="bg-[#f3f4ec] border border-[rgba(193,200,194,0.2)] rounded-xl p-6 flex flex-col gap-6 shadow-[0px_1px_1px_rgba(0,0,0,0.05)]">
+                <div className="flex items-center gap-2">
+                  <h2 className="font-semibold text-[#1a1c18] text-xl">My Activity</h2>
                 </div>
-                <div className="bg-[#e2e3db] h-2 rounded-full overflow-hidden">
-                  <div
-                    className="bg-[#1b4332] h-2 rounded-full"
-                    style={{ width: `${Math.min(100, myListings.length * 20)}%` }}
-                  />
-                </div>
-              </div>
-              <div className="border-t border-[rgba(193,200,194,0.3)] pt-4 flex flex-col gap-4">
-                <span className="font-semibold text-[#414844] text-xs tracking-[0.6px]">
-                  Recent Listings
-                </span>
-                {myListings.slice(0, 2).map((item) => (
-                  <button
-                    key={item.id}
-                    onClick={() => router.push(`/marketplace/${item.id}`)}
-                    className="bg-white border border-[rgba(193,200,194,0.3)] rounded-lg p-3 flex items-center gap-3 text-left"
-                  >
-                    <div className="w-12 h-12 bg-[#e2e3db] rounded overflow-hidden shrink-0">
-                      {item.imageUrl ? (
-                        <img src={item.imageUrl} alt="" className="w-full h-full object-cover" />
-                      ) : null}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-[#1a1c18] text-sm leading-5 truncate">
-                        {item.title}
-                      </p>
-                      <p className="font-bold text-[#414844] text-[10px] tracking-[1px]">
-                        {formatPrice(item)}
-                      </p>
-                    </div>
-                  </button>
-                ))}
-                {myListings.length === 0 ? (
-                  <div className="bg-white border border-[rgba(193,200,194,0.3)] rounded-lg p-3 text-[#717973] text-sm">
-                    Your first listing will show up here.
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-baseline justify-between">
+                    <span className="font-semibold text-[#414844] text-xs tracking-[0.6px]">
+                      Active Listings
+                    </span>
+                    <span className="font-semibold text-[#012d1d] text-2xl">
+                      {myListings.length}
+                    </span>
                   </div>
-                ) : null}
+                  <div className="bg-[#e2e3db] h-2 rounded-full overflow-hidden">
+                    <div
+                      className="bg-[#1b4332] h-2 rounded-full"
+                      style={{ width: `${Math.min(100, myListings.length * 20)}%` }}
+                    />
+                  </div>
+                </div>
+                <div className="border-t border-[rgba(193,200,194,0.3)] pt-4 flex flex-col gap-4">
+                  <span className="font-semibold text-[#414844] text-xs tracking-[0.6px]">
+                    Recent Listings
+                  </span>
+                  {myListings.slice(0, 2).map((item) => (
+                    <button
+                      key={item.id}
+                      onClick={() => router.push(`/marketplace/${item.id}`)}
+                      className="bg-white border border-[rgba(193,200,194,0.3)] rounded-lg p-3 flex items-center gap-3 text-left"
+                    >
+                      <div className="w-12 h-12 bg-[#e2e3db] rounded overflow-hidden shrink-0">
+                        {item.imageUrl ? (
+                          <img src={item.imageUrl} alt="" className="w-full h-full object-cover" />
+                        ) : null}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-[#1a1c18] text-sm leading-5 truncate">
+                          {item.title}
+                        </p>
+                        <p className="font-bold text-[#414844] text-[10px] tracking-[1px]">
+                          {formatPrice(item)}
+                        </p>
+                      </div>
+                    </button>
+                  ))}
+                  {myListings.length === 0 ? (
+                    <div className="bg-white border border-[rgba(193,200,194,0.3)] rounded-lg p-3 text-[#717973] text-sm">
+                      Your first listing will show up here.
+                    </div>
+                  ) : null}
+                </div>
+                <Link
+                  href="/create-listing"
+                  className="bg-[#1b4332] text-white text-xs font-semibold tracking-[0.6px] px-4 py-3 rounded-lg text-center hover:bg-[#012d1d] transition-colors"
+                >
+                  + Make a Listing
+                </Link>
               </div>
-              <Link
-                href="/create-listing"
-                className="bg-[#1b4332] text-white text-xs font-semibold tracking-[0.6px] px-4 py-3 rounded-lg text-center hover:bg-[#012d1d] transition-colors"
-              >
-                Make a Listing
-              </Link>
-            </div>
-          </aside>
+            </aside>
+          ) : null}
         </div>
       </main>
     </div>
