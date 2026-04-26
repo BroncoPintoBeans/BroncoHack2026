@@ -1,5 +1,7 @@
 import { z } from 'zod'
 
+const UuidSchema = z.string().uuid()
+
 const CaseCategorySchema = z.enum(['laptop', 'bicycle', 'scooter', 'mini_fridge'])
 const UrgencySchema = z.enum(['low', 'normal', 'urgent'])
 const CaseStatusSchema = z.enum(['draft', 'open', 'running', 'awaiting_user', 'complete', 'failed'])
@@ -114,6 +116,10 @@ export const HelperRequestRowSchema = z.object({
 
 type SupabaseErrorLike = { message: string } | null
 
+export function isUuid(value: string): boolean {
+  return UuidSchema.safeParse(value).success
+}
+
 export function assertNoSupabaseError(error: SupabaseErrorLike, context: string): void {
   if (error) {
     throw new Error(`${context}: ${error.message}`)
@@ -123,7 +129,10 @@ export function assertNoSupabaseError(error: SupabaseErrorLike, context: string)
 export function parseDbRow<T>(schema: z.ZodSchema<T>, row: unknown, context: string): T {
   const parsed = schema.safeParse(row)
   if (!parsed.success) {
-    throw new Error(`${context}: invalid row shape`)
+    const details = parsed.error.issues
+      .map((issue) => `${issue.path.join('.') || '<root>'}: ${issue.message}`)
+      .join('; ')
+    throw new Error(`${context}: invalid row shape (${details})`)
   }
   return parsed.data
 }

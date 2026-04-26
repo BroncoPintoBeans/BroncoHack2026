@@ -1,7 +1,7 @@
 import { isSupabaseAvailable, getSupabaseClient } from '../client'
 import { demoStore } from '../demo-store'
 import type { CaseMediaRecord } from '../../types/case'
-import { assertNoSupabaseError } from './validation'
+import { assertNoSupabaseError, isUuid } from './validation'
 
 const CASE_MEDIA_BUCKET = 'case-media'
 const SIGNED_URL_TTL_SECONDS = 60 * 60
@@ -23,7 +23,7 @@ async function resolveStorageUrl(storagePath: string): Promise<string> {
     return storagePath
   }
 
-  const { data, error } = await getSupabaseClient()
+  const { data, error } = await (await getSupabaseClient())
     .storage
     .from(CASE_MEDIA_BUCKET)
     .createSignedUrl(storagePath, SIGNED_URL_TTL_SECONDS)
@@ -47,7 +47,9 @@ function rowToMediaRecord(row: CaseMediaRow, url: string): CaseMediaRecord {
 
 export async function listCaseMedia(caseId: string): Promise<CaseMediaRecord[]> {
   if (isSupabaseAvailable()) {
-    const { data: rows, error } = await getSupabaseClient()
+    if (!isUuid(caseId)) return []
+
+    const { data: rows, error } = await (await getSupabaseClient())
       .from('case_media')
       .select('id, case_id, storage_path, media_type, created_at')
       .eq('case_id', caseId)

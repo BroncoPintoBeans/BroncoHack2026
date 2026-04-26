@@ -51,3 +51,7 @@ export interface PublishHelperRequestResponse {
   helper_request: HelperRequestDetail
   created: boolean
 }
+
+export interface GetPublishedHelperRequestResponse {
+  helper_request: HelperRequestDetail | null
+}

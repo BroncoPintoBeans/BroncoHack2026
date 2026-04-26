@@ -14,6 +14,7 @@ import type {
   GetEventsResponse,
   PublishHelperRequestRequest,
   PublishHelperRequestResponse,
+  GetPublishedHelperRequestResponse,
 } from '@/lib/types/api'
 
 export class ApiError extends Error {
@@ -118,4 +119,8 @@ export function publishHelperRequest(
     method: 'POST',
     body: JSON.stringify(body),
   })
+}
+
+export function getPublishedHelperRequest(id: string): Promise<GetPublishedHelperRequestResponse> {
+  return apiFetch<GetPublishedHelperRequestResponse>(`/api/cases/${id}/helper-request`)
 }

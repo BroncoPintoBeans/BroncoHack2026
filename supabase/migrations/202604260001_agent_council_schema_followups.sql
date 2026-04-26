@@ -247,28 +247,58 @@ alter table public.helper_requests
 create index if not exists helper_requests_report_idx
   on public.helper_requests(report_id);
 
-create or replace view public.community_helper_request_cards as
-select
-  hr.id,
-  hr.case_id,
-  hr.report_id,
-  hr.title,
-  hr.public_summary,
-  hr.category,
-  hr.urgency,
-  hr.campus_area,
-  hr.preferred_time,
-  hr.skill_tags,
-  hr.safety_flags,
-  hr.status,
-  hr.verdict_label,
-  hr.rrr_score,
-  count(hro.id) filter (where hro.status = 'pending') as pending_offer_count,
-  hr.created_at,
-  hr.updated_at
-from public.helper_requests hr
-left join public.helper_request_offers hro on hro.helper_request_id = hr.id
-group by hr.id;
+do $$
+begin
+  if to_regclass('public.helper_request_offers') is not null then
+    execute $view$
+      create or replace view public.community_helper_request_cards as
+      select
+        hr.id,
+        hr.case_id,
+        hr.report_id,
+        hr.title,
+        hr.public_summary,
+        hr.category,
+        hr.urgency,
+        hr.campus_area,
+        hr.preferred_time,
+        hr.skill_tags,
+        hr.safety_flags,
+        hr.status,
+        hr.verdict_label,
+        hr.rrr_score,
+        count(hro.id) filter (where hro.status = 'pending') as pending_offer_count,
+        hr.created_at,
+        hr.updated_at
+      from public.helper_requests hr
+      left join public.helper_request_offers hro on hro.helper_request_id = hr.id
+      group by hr.id
+    $view$;
+  else
+    execute $view$
+      create or replace view public.community_helper_request_cards as
+      select
+        hr.id,
+        hr.case_id,
+        hr.report_id,
+        hr.title,
+        hr.public_summary,
+        hr.category,
+        hr.urgency,
+        hr.campus_area,
+        hr.preferred_time,
+        hr.skill_tags,
+        hr.safety_flags,
+        hr.status,
+        hr.verdict_label,
+        hr.rrr_score,
+        0::bigint as pending_offer_count,
+        hr.created_at,
+        hr.updated_at
+      from public.helper_requests hr
+    $view$;
+  end if;
+end $$;
 
 alter table public.helper_requests enable row level security;
 
@@ -357,11 +387,11 @@ create policy "case-media owner upload" on storage.objects
   for insert to authenticated
   with check (
     bucket_id = 'case-media'
-    and storage.foldername(name)[1] = (select auth.uid())::text
+    and (storage.foldername(name))[1] = (select auth.uid())::text
     and exists (
       select 1
       from public.cases c
-      where c.id::text = storage.foldername(name)[2]
+      where c.id::text = (storage.foldername(name))[2]
         and c.user_id = (select auth.uid())
     )
   );
@@ -370,11 +400,11 @@ create policy "case-media owner read" on storage.objects
   for select to authenticated
   using (
     bucket_id = 'case-media'
-    and storage.foldername(name)[1] = (select auth.uid())::text
+    and (storage.foldername(name))[1] = (select auth.uid())::text
     and exists (
       select 1
       from public.cases c
-      where c.id::text = storage.foldername(name)[2]
+      where c.id::text = (storage.foldername(name))[2]
         and c.user_id = (select auth.uid())
     )
   );

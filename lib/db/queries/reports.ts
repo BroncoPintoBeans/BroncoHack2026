@@ -136,7 +136,7 @@ async function loadSupabaseOutputs(caseId: string, runId: string): Promise<{
   actionPlan: ActionPlanPayload | null
   helperMatches: HelperMatch[]
 }> {
-  const supabase = getSupabaseClient()
+  const supabase = await getSupabaseClient()
   const [diagRow, verdictRow, planRow, helperRow] = await Promise.all([
     supabase.from('diagnoses').select().eq('case_id', caseId).eq('run_id', runId).maybeSingle(),
     supabase.from('verdicts').select().eq('case_id', caseId).eq('run_id', runId).maybeSingle(),
@@ -281,7 +281,7 @@ export async function createOrUpdateCaseReportForRun(caseId: string, runId: stri
 
   if (isSupabaseAvailable()) {
     const id = crypto.randomUUID()
-    const { data: row, error } = await getSupabaseClient()
+    const { data: row, error } = await (await getSupabaseClient())
       .from('case_reports')
       .upsert({
         id,
@@ -320,7 +320,7 @@ export async function createOrUpdateCaseReportForRun(caseId: string, runId: stri
 
 export async function getLatestCaseReport(caseId: string): Promise<CaseReportRecord | null> {
   if (isSupabaseAvailable()) {
-    const { data: row, error } = await getSupabaseClient()
+    const { data: row, error } = await (await getSupabaseClient())
       .from('case_reports')
       .select()
       .eq('case_id', caseId)
@@ -338,7 +338,7 @@ export async function getLatestCaseReport(caseId: string): Promise<CaseReportRec
 
 export async function getCaseReport(reportId: string): Promise<CaseReportRecord | null> {
   if (isSupabaseAvailable()) {
-    const { data: row, error } = await getSupabaseClient()
+    const { data: row, error } = await (await getSupabaseClient())
       .from('case_reports')
       .select()
       .eq('id', reportId)

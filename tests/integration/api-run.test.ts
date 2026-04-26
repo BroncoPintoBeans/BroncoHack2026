@@ -91,7 +91,7 @@ describe('GET /api/cases/[id]/current', () => {
     const firstBody = await firstCurrent.json()
     expect(firstBody.snapshot.report).toBeDefined()
     expect(firstBody.snapshot.report.runId).toBe(runBody.runId)
-    expect(firstBody.snapshot.report.reportJson.diagnosis.rootCause).toContain('Thermal paste')
+    expect(firstBody.snapshot.report.reportJson.diagnosis.rootCause).toContain('liquid contamination')
     expect(firstBody.snapshot.report.boardSummaryJson.verdictLabel).toBe('repair_now')
 
     const secondRunRes = await startRun(runReq, { params: Promise.resolve({ id: createdCase.id }) })

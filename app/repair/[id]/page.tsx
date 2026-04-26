@@ -4,7 +4,7 @@ import { useParams } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useCaseRun } from "@/hooks/useCaseRun";
 import { useFollowUp } from "@/hooks/useFollowUp";
-import { ApiError, publishHelperRequest, startRun } from "@/lib/api/client";
+import { ApiError, getPublishedHelperRequest, publishHelperRequest, startRun } from "@/lib/api/client";
 import { BroncoAssistant } from "@/components/BroncoAssistant";
 import type { CaseEventRecord } from "@/lib/types/case";
 import type { AgentPhase } from "@/lib/types/agents";
@@ -131,6 +131,9 @@ export default function RepairWorkspacePage() {
   const [publishState, setPublishState] = useState<"idle" | "submitting" | "published">("idle");
   const [publishError, setPublishError] = useState<ApiError | null>(null);
   const [publishedRequestId, setPublishedRequestId] = useState<string | null>(null);
+  const runStatus = snapshot?.currentRun?.status;
+  const isComplete = runStatus === "complete";
+  const isAwaitingUser = runStatus === "awaiting_user";
 
   // Auto-trigger a run when the case is open with no active run yet
   const hasStartedRef = useRef(false);
@@ -146,6 +149,25 @@ export default function RepairWorkspacePage() {
       });
     }
   }, [snapshot, id]);
+
+  useEffect(() => {
+    if (!isComplete || !snapshot) return;
+    let cancelled = false;
+
+    getPublishedHelperRequest(snapshot.case.id)
+      .then((result) => {
+        if (cancelled || !result.helper_request) return;
+        setPublishedRequestId(result.helper_request.id);
+        setPublishState("published");
+      })
+      .catch(() => {
+        // Publishing is optional, so a read-back miss should not block the verdict page.
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isComplete, snapshot]);
 
   async function handlePublish(e: FormEvent) {
     e.preventDefault();
@@ -176,10 +198,6 @@ export default function RepairWorkspacePage() {
       setPublishState("idle");
     }
   }
-
-  const runStatus = snapshot?.currentRun?.status;
-  const isComplete = runStatus === "complete";
-  const isAwaitingUser = runStatus === "awaiting_user";
 
   const intakeComplete = getPhaseStatus("intake", events) === "COMPLETE";
   const steps = [

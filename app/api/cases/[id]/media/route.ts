@@ -119,7 +119,8 @@ export async function POST(
   const mediaType = mediaTypeFromMime(file.type)
 
   if (isSupabaseAvailable()) {
-    const { count, error: countError } = await getSupabaseClient()
+    const supabase = await getSupabaseClient()
+    const { count, error: countError } = await supabase
       .from('case_media')
       .select('id', { count: 'exact', head: true })
       .eq('case_id', parsedId.value)
@@ -132,7 +133,7 @@ export async function POST(
     }
 
     const storagePath = `${caseRecord.userId}/${parsedId.value}/${mediaId}-${safeFileName(file.name)}`
-    const { error: uploadError } = await getSupabaseClient()
+    const { error: uploadError } = await supabase
       .storage
       .from(CASE_MEDIA_BUCKET)
       .upload(storagePath, file, {
@@ -144,7 +145,7 @@ export async function POST(
       return internalServerError('Failed to upload media')
     }
 
-    const { data, error } = await getSupabaseClient()
+    const { data, error } = await supabase
       .from('case_media')
       .insert({
         id: mediaId,
@@ -161,7 +162,7 @@ export async function POST(
       return internalServerError('Failed to save media')
     }
 
-    const { data: signed, error: signedError } = await getSupabaseClient()
+    const { data: signed, error: signedError } = await supabase
       .storage
       .from(CASE_MEDIA_BUCKET)
       .createSignedUrl(storagePath, 60 * 60)

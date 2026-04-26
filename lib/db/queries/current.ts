@@ -18,7 +18,7 @@ import {
 
 export async function getCurrentCaseOutput(caseId: string): Promise<CurrentCaseOutput | null> {
   if (isSupabaseAvailable()) {
-    const supabase = getSupabaseClient()
+    const supabase = await getSupabaseClient()
 
     const caseRecord = await getCase(caseId)
     if (!caseRecord) return null
