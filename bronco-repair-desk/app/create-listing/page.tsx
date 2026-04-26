@@ -2,6 +2,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
+import { DEFAULT_REWARD_USER_ID, EARN_RULES } from "@/lib/rewards/data";
 
 const categories = ["Laptops", "Bicycles", "E-Scooters", "Appliances", "Furniture", "Books", "Clothing", "Other"];
 const conditions = ["Like New", "Good", "Used - Fair", "For Parts"];
@@ -11,11 +12,48 @@ const listingTypes = [
   { value: "free", label: "Free", desc: "Give it away", color: "#012d1d" },
   { value: "repair", label: "Needs Repair", desc: "Sell as-is for parts", color: "#623f18" },
 ];
+const listingReward = EARN_RULES.find((rule) => rule.id === "listing-published") ?? EARN_RULES[0];
 
 export default function CreateListingPage() {
   const [step, setStep] = useState(1);
   const [type, setType] = useState("sale");
   const [condition, setCondition] = useState("Good");
+  const [published, setPublished] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [publishError, setPublishError] = useState<string | null>(null);
+
+  async function handlePublish() {
+    if (published || isPublishing) {
+      return;
+    }
+
+    setIsPublishing(true);
+    setPublishError(null);
+
+    try {
+      const response = await fetch("/api/rewards/earn", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: DEFAULT_REWARD_USER_ID,
+          actionId: listingReward.id,
+          sourceType: "marketplace_listing",
+          sourceId: "draft-listing",
+        }),
+      });
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error ?? "Listing reward could not be awarded");
+      }
+
+      setPublished(true);
+    } catch (error) {
+      setPublishError(error instanceof Error ? error.message : "Listing reward could not be awarded");
+    } finally {
+      setIsPublishing(false);
+    }
+  }
 
   return (
     <div className="min-h-screen bg-[#f9faf2]">
@@ -131,6 +169,13 @@ export default function CreateListingPage() {
                 <svg className="shrink-0 mt-0.5" width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="9" stroke="#274e3d" strokeWidth="1.5"/><path d="M10 6v4.5M10 13h.01" stroke="#274e3d" strokeWidth="1.5" strokeLinecap="round"/></svg>
                 <p className="text-[#274e3d] text-sm leading-relaxed">If your item is damaged, consider using the <Link href="/repair/case-84920" className="font-semibold underline">Repair Verdict</Link> tool first. Items with a repair verdict attached get 2× more interest!</p>
               </div>
+              <div className="bg-[#f3f4ec] border border-[#e2e3db] rounded-xl p-4 flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-[#414844] text-xs font-semibold tracking-[0.6px] uppercase">Token Reward</p>
+                  <p className="text-[#1a1c18] text-sm mt-1">Publishing this listing earns Bronco Tokens for starting a reuse path.</p>
+                </div>
+                <span className="bg-[#1b4332] text-white text-sm font-bold px-3 py-2 rounded-lg whitespace-nowrap">+{listingReward.tokens} BT</span>
+              </div>
             </div>
           )}
 
@@ -152,8 +197,33 @@ export default function CreateListingPage() {
                   <span className="text-[#717973] text-xs">📍 Pickup location</span>
                 </div>
               </div>
-              <button className="bg-[#1b4332] text-white text-sm font-semibold tracking-[0.6px] py-4 rounded-xl hover:bg-[#012d1d] transition-colors">
-                Publish Listing
+              {published && (
+                <div className="bg-[#c1ecd4] border border-[#86af99] rounded-xl p-4 flex items-center justify-between gap-4">
+                  <div>
+                    <p className="font-semibold text-[#012d1d] text-sm">Listing submitted</p>
+                    <p className="text-[#274e3d] text-sm mt-0.5">+{listingReward.tokens} Bronco Tokens added to your rewards ledger.</p>
+                  </div>
+                  <Link href="/rewards" className="text-[#012d1d] text-xs font-semibold tracking-[0.6px] underline whitespace-nowrap">
+                    View Rewards
+                  </Link>
+                </div>
+              )}
+              {publishError && (
+                <div className="bg-[#ffdcbd] border border-[#f0bd8b] rounded-xl p-4">
+                  <p className="text-[#623f18] text-sm">{publishError}</p>
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={handlePublish}
+                disabled={published || isPublishing}
+                className={`text-sm font-semibold tracking-[0.6px] py-4 rounded-xl transition-colors ${
+                  published
+                    ? "bg-[#e2e3db] text-[#717973] cursor-default"
+                    : "bg-[#1b4332] text-white hover:bg-[#012d1d]"
+                }`}
+              >
+                {published ? "Published" : isPublishing ? "Publishing..." : `Publish Listing +${listingReward.tokens} BT`}
               </button>
             </div>
           )}

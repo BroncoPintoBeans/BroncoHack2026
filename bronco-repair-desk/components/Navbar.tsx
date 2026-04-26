@@ -5,8 +5,8 @@ import { usePathname } from "next/navigation";
 const navLinks = [
   { href: "/marketplace", label: "Marketplace" },
   { href: "/repair/case-84920", label: "Repair Guide" },
-  { href: "/rewards", label: "Impact" },
-  { href: "/marketplace", label: "Categories" },
+  { href: "/rewards", label: "Rewards" },
+  { href: "/dashboard", label: "Dashboard" },
 ];
 
 export default function Navbar() {

@@ -4,8 +4,13 @@ import Navbar from "@/components/Navbar";
 const bikeImg = "https://www.figma.com/api/mcp/asset/35e5ed29-e59c-4710-a888-21f11a1394a4";
 const laptopImg = "https://www.figma.com/api/mcp/asset/60147299-9838-4982-8155-e0593c5b8423";
 
-export default function ItemDetailPage({ params }: { params: { id: string } }) {
-  const isBike = params.id === "vintage-road-bike";
+type ItemDetailPageProps = {
+  params: Promise<{ id: string }>;
+};
+
+export default async function ItemDetailPage({ params }: ItemDetailPageProps) {
+  const { id } = await params;
+  const isBike = id === "vintage-road-bike";
   const item = isBike
     ? { title: "Vintage Road Bike", price: "$45", type: "sale", condition: "Repairable", img: bikeImg, location: "West Village", posted: "Apr 18, 2024", seller: "Alex C.", desc: "A beautiful vintage road bike with a solid steel frame. Needs a new chain and some tire patching, but the frame is in excellent shape and the gears shift smoothly. Perfect for someone who enjoys a weekend project.", repairs: ["New chain (~$15)", "Tire patch kit (~$5)", "Brake cable adjustment"] }
     : { title: "Older Macbook Pro", price: "$120", type: "sale", condition: "Repairable", img: laptopImg, location: "North Quad", posted: "Apr 10, 2024", seller: "Sam L.", desc: "An older MacBook Pro in repairable condition. Battery needs replacing soon, runs a bit slow but boots fine. Good for parts or basic use as a secondary machine.", repairs: ["Battery replacement (~$80)", "SSD upgrade (optional, ~$60)"] };
