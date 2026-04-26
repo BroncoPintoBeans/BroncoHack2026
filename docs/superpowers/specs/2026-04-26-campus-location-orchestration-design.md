@@ -28,7 +28,7 @@ The root checkout is dirty. Modified files include those six planning docs plus 
 
 Use a two-stage fanout.
 
-Stage 1 creates a contract-lock branch that edits planning docs only and resolves contradictions. Stage 2 creates implementation worktrees from the contract-lock commit.
+Stage 1 happened on `feat/map-main` because the requested `feat:map-main` branch name was not valid. It edits planning docs only and resolves contradictions. Stage 2 creates implementation worktrees from the reviewed fanout base commit.
 
 This is preferred over direct implementation because the current docs disagree on authority order, shuttle estimates, reverse shuttle direction, and reverse-logistics output shape. Fanout before resolving those conflicts would cause workers to create incompatible modules.
 
@@ -37,7 +37,7 @@ This is preferred over direct implementation because the current docs disagree o
 Branch:
 
 ```text
-feat/campus-location-contract-lock
+feat/map-main
 ```
 
 Scope:
@@ -76,9 +76,20 @@ Stage 1 done criteria:
 - All implementation agents can consume the docs without resolving contradictions themselves.
 - The contract-lock commit SHA is recorded before Stage 2 starts.
 
+Stage 1 commit record:
+
+| Use | Commit SHA |
+|---|---|
+| Initial contract lock | `acd8a2d84d762aaf73575241f399f7264b1883e8` |
+| Current implementation fanout base | `64cb67699ca835f86e585fad7a6d397a8e0fd4a4` |
+
 ## Stage 2: Implementation Fanout
 
-Create implementation worktrees only after the contract-lock commit exists.
+Create implementation worktrees only after the current implementation fanout base exists. Workers must branch from:
+
+```text
+64cb67699ca835f86e585fad7a6d397a8e0fd4a4
+```
 
 Recommended worktree map:
 
@@ -93,7 +104,7 @@ Recommended worktree map:
 
 Merge order:
 
-1. `feat/campus-location-contract-lock`
+1. `feat/map-main` at `64cb67699ca835f86e585fad7a6d397a8e0fd4a4`
 2. `feat/campus-location-contract`
 3. `feat/reverse-logistics-routing` and `feat/green-shuttle-routing` in parallel after location helpers land
 4. `feat/campus-map-ui` and `feat/campus-location-plan` after shared helpers exist

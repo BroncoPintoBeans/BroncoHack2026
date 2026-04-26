@@ -190,7 +190,7 @@ Routing expectations:
 - Parts destination includes `bronco-bookstore-tech-building-66`.
 - Public exchange coordination can suggest `marketplace-exchange-public-meetup`.
 - The Village can be used as a pickup zone and shuttle origin, not as a repair destination.
-- Unknown item categories should return a generic campus repair/reuse option list, not an error.
+- Unknown or ambiguous item categories should return `marketplace-exchange-public-meetup` as the low-confidence primary recommendation with repair/reuse alternatives such as `it-tech-help-library-2f` and `ilab-building-1-room-113`, not an error.
 
 ## 6. Shuttle Route Contract
 
@@ -255,6 +255,21 @@ Recommendation behavior:
 - `sourceUrl` must always be the official CPP shuttle page.
 - `rideMinutes` and `walkMinutes` are estimates and must not be labeled as live ETAs.
 
+Required positive output for `village` -> `student-services-building`:
+
+```ts
+{
+  recommended: true,
+  routeId: "main-campus-village-demo",
+  fromStop: "village",
+  toStop: "student-services-building",
+  walkMinutes: 0,
+  rideMinutes: 8,
+  reason: "Estimated shuttle ride from The Village to the official Student Services Building shuttle stop.",
+  sourceUrl: "https://www.cpp.edu/transportation/commuting-to-campus/bronco-shuttle.shtml"
+}
+```
+
 ## 7. Accessibility And Fallbacks
 
 Every campus map surface must support:
@@ -304,6 +319,7 @@ Unit tests:
 - Reverse logistics returns repair destinations for generic repair intent.
 - Reverse logistics returns reuse destinations for reuse intent.
 - Shuttle recommendation for `village` to `ilab-building-1-room-113` returns `recommended: true`, `routeId: "main-campus-village-demo"`, `fromStop: "village"`, `toStop: "student-services-building"`, numeric walk/ride estimates, a reason, and the official source URL.
+- Shuttle recommendation for `village` to `student-services-building` returns `recommended: true`, `routeId: "main-campus-village-demo"`, `fromStop: "village"`, `toStop: "student-services-building"`, `walkMinutes: 0`, `rideMinutes: 8`, a reason that says the estimate goes to the official Student Services Building shuttle stop, and the official source URL.
 - Non-benefiting shuttle cases return `recommended: false` without throwing.
 
 Compatibility tests:

@@ -194,13 +194,19 @@ Shared-file policy:
 
 ## Task Sequencing
 
-Stage 1 contract-lock commit on `feat/map-main`:
+Stage 1 initial contract-lock commit on `feat/map-main`:
 
 ```text
 acd8a2d84d762aaf73575241f399f7264b1883e8
 ```
 
-Implementation lanes must fan out from this SHA before Stage 2 starts.
+Current reviewed implementation fanout base on `feat/map-main`:
+
+```text
+64cb67699ca835f86e585fad7a6d397a8e0fd4a4
+```
+
+Implementation lanes must fan out from `64cb67699ca835f86e585fad7a6d397a8e0fd4a4` before Stage 2 starts.
 
 1. Lock the six campus planning docs enough for field names, module exports, authority, worktree ownership, and UI fallback language. This Stage 1 contract-lock work happened on `feat/map-main`.
 2. Add `lib/campus/locations.ts` with the seven canonical IDs and lookup helpers.
@@ -219,7 +225,7 @@ Implementation lanes must fan out from this SHA before Stage 2 starts.
 - If `platform-feature-contracts.md` conflicts with this doc on Marketplace table/API ownership, `platform-feature-contracts.md` wins.
 - If `architecture.md` conflicts with this doc on repo ownership, freeze protocol, or cut rules, `architecture.md` wins.
 - Subsystem docs may add fields, helper functions, UI states, and test cases, but they must keep the canonical IDs and optional listing field policy.
-- Implementation worktrees must branch from the `feat/map-main` contract-lock commit SHA `acd8a2d84d762aaf73575241f399f7264b1883e8`, then use the lane worktree paths from `docs/superpowers/specs/2026-04-26-campus-location-orchestration-design.md`.
+- Implementation worktrees must branch from the `feat/map-main` reviewed fanout base SHA `64cb67699ca835f86e585fad7a6d397a8e0fd4a4`, then use the lane worktree paths from `docs/superpowers/specs/2026-04-26-campus-location-orchestration-design.md`.
 - Public copy must distinguish "recommended destination" from "guaranteed dropoff accepted here."
 - Shuttle copy must distinguish "estimated route" from "live shuttle arrival."
 

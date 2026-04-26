@@ -175,7 +175,7 @@ export type ShuttleRecommendation = {
 
 `routeId`, `fromStop`, and `toStop` must remain populated even when `recommended` is `false` so UI, tests, and analytics never need a nullable transport shape. Use the demo route and canonical stops with `walkMinutes: 0` and `rideMinutes: 0` for negative cases.
 
-Required positive output for the demo trip:
+Required positive output for `village` -> `ilab-building-1-room-113`:
 
 ```ts
 {
@@ -186,6 +186,21 @@ Required positive output for the demo trip:
   walkMinutes: 4,
   rideMinutes: 8,
   reason: "Estimated cross-campus trip from The Village to Building 1/iLab; shuttle can cover the long segment, then walk from Student Services Building.",
+  sourceUrl: "https://www.cpp.edu/transportation/commuting-to-campus/bronco-shuttle.shtml"
+}
+```
+
+Required positive output for `village` -> `student-services-building`:
+
+```ts
+{
+  recommended: true,
+  routeId: "main-campus-village-demo",
+  fromStop: "village",
+  toStop: "student-services-building",
+  walkMinutes: 0,
+  rideMinutes: 8,
+  reason: "Estimated shuttle ride from The Village to the official Student Services Building shuttle stop.",
   sourceUrl: "https://www.cpp.edu/transportation/commuting-to-campus/bronco-shuttle.shtml"
 }
 ```
@@ -352,7 +367,7 @@ Steps:
 1. Define `ShuttleRoute` and `ShuttleRecommendation`.
 2. Add `MAIN_CAMPUS_VILLAGE_DEMO_ROUTE`.
 3. Implement `getShuttleRecommendation({ pickupId, destinationId })`.
-4. Return the exact positive shape for `village` -> `ilab-building-1-room-113`.
+4. Return the exact positive shapes for `village` -> `ilab-building-1-room-113` and `village` -> `student-services-building`.
 5. Return the exact negative shape for reverse and all non-allowlisted trips, with non-null route and stop IDs plus zeroed estimate fields.
 6. Add tests for route ID, stop names, source URL, estimate values, allowlisted positive cases, and non-allowlisted negative cases.
 
