@@ -187,7 +187,7 @@ export default function RewardsPage() {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <Link href="/repair/case-84920" title="Start a repair verdict to earn Bronco Tokens" className="inline-flex items-center justify-center gap-2 bg-[#1b4332] text-white text-sm font-semibold px-4 py-2.5 rounded-lg hover:bg-[#012d1d] transition-colors">
+                <Link href="/repair/new" title="Start a repair verdict to earn Bronco Tokens" className="inline-flex items-center justify-center gap-2 bg-[#1b4332] text-white text-sm font-semibold px-4 py-2.5 rounded-lg hover:bg-[#012d1d] transition-colors">
                   Start Repair
                   <ArrowIcon />
                 </Link>

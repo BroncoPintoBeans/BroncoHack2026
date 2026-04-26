@@ -4,6 +4,7 @@ import type { CaseRunRecord } from '../../types/case'
 import type { AgentPhase } from '../../types/agents'
 import {
   assertNoSupabaseError,
+  isUuid,
   parseDbRow,
   RunRowSchema,
 } from './validation'
@@ -38,9 +39,10 @@ export async function createRun(data: {
     if (!data.userId) {
       throw new Error('createRun requires userId when Supabase is enabled')
     }
+    const supabase = await getSupabaseClient()
 
     // Demote any existing current run
-    const { error: demoteError } = await getSupabaseClient()
+    const { error: demoteError } = await supabase
       .from('case_runs')
       .update({ is_current: false })
       .eq('case_id', data.caseId)
@@ -48,13 +50,13 @@ export async function createRun(data: {
     assertNoSupabaseError(demoteError, 'createRun demote current run')
 
     const id = crypto.randomUUID()
-    const { count, error: countError } = await getSupabaseClient()
+    const { count, error: countError } = await supabase
       .from('case_runs')
       .select('id', { count: 'exact', head: true })
       .eq('case_id', data.caseId)
     assertNoSupabaseError(countError, 'createRun count prior runs')
 
-    const { data: row, error } = await getSupabaseClient()
+    const { data: row, error } = await supabase
       .from('case_runs')
       .insert({
         id,
@@ -103,7 +105,9 @@ export async function createRun(data: {
 
 export async function getCurrentRun(caseId: string): Promise<CaseRunRecord | null> {
   if (isSupabaseAvailable()) {
-    const { data: row, error } = await getSupabaseClient()
+    if (!isUuid(caseId)) return null
+
+    const { data: row, error } = await (await getSupabaseClient())
       .from('case_runs')
       .select()
       .eq('case_id', caseId)
@@ -120,7 +124,9 @@ export async function getCurrentRun(caseId: string): Promise<CaseRunRecord | nul
 
 export async function getRun(runId: string): Promise<CaseRunRecord | null> {
   if (isSupabaseAvailable()) {
-    const { data: row, error } = await getSupabaseClient()
+    if (!isUuid(runId)) return null
+
+    const { data: row, error } = await (await getSupabaseClient())
       .from('case_runs')
       .select()
       .eq('id', runId)
@@ -143,7 +149,7 @@ export async function updateRun(
     if (data.awaitingQuestion !== undefined) patch.awaiting_question = data.awaitingQuestion
     if (data.awaitingOptions !== undefined) patch.awaiting_options = data.awaitingOptions
     if (data.followupCount !== undefined) patch.followup_count = data.followupCount
-    const { data: row, error } = await getSupabaseClient()
+    const { data: row, error } = await (await getSupabaseClient())
       .from('case_runs')
       .update(patch)
       .eq('id', runId)

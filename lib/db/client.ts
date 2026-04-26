@@ -1,20 +1,18 @@
-import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import type { SupabaseClient } from '@supabase/supabase-js'
+import { createClient as createServerSupabaseClient } from '@/lib/supabase/server'
 
 if (typeof window !== 'undefined') {
   throw new Error('lib/db/client must only be imported on the server')
 }
 
 export function isSupabaseAvailable(): boolean {
-  return !!(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY)
+  return !!(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
 }
 
-let _client: SupabaseClient | null = null
-
-export function getSupabaseClient(): SupabaseClient {
-  if (!_client) {
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL!
-    const key = process.env.SUPABASE_SERVICE_ROLE_KEY!
-    _client = createClient(url, key)
+export async function getSupabaseClient(): Promise<SupabaseClient> {
+  if (!isSupabaseAvailable()) {
+    throw new Error('Supabase is not configured')
   }
-  return _client
+
+  return createServerSupabaseClient()
 }

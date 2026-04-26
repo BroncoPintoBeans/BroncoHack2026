@@ -11,7 +11,14 @@ export async function runEconomics(
   diagnosisPayload: DiagnosisCompletePayload,
 ): Promise<EconomicsPayload> {
   const client = buildClient('flash')
-  if (!client) return mockEconomics(ctx, { symptoms: [], photoUrls: [], inferredCategory: caseRecord.category, confidence: diagnosisPayload.confidence }, diagnosisPayload)
+  if (!client) {
+    return mockEconomics(
+      ctx,
+      caseRecord,
+      { symptoms: [], photoUrls: [], inferredCategory: caseRecord.category, confidence: diagnosisPayload.confidence },
+      diagnosisPayload,
+    )
+  }
 
   const { generateObject } = await import('ai')
   const { z } = await import('zod')
@@ -27,6 +34,9 @@ export async function runEconomics(
   const prompt = `You are a repair economics analyst. Estimate repair vs replacement economics.
 
 Device: ${caseRecord.category}
+User symptoms: ${caseRecord.symptoms}
+Model number: ${caseRecord.modelNumber ?? 'unknown'}
+User-provided repair quote: ${caseRecord.quoteCents != null ? `$${(caseRecord.quoteCents / 100).toFixed(2)}` : 'none'}
 Root cause: ${diagnosisPayload.rootCause}
 Diagnosis confidence: ${diagnosisPayload.confidence}
 User urgency: ${caseRecord.urgency}

@@ -204,7 +204,7 @@ export async function deleteMarketplaceConversation(conversationId: string, user
     throw Object.assign(new Error("conversation not found"), { status: 404 });
   }
 
-  const writer = isSupabaseAvailable() ? getSupabaseClient() : supabase;
+  const writer = isSupabaseAvailable() ? await getSupabaseClient() : supabase;
 
   const { error: messagesError } = await writer
     .from("messages")
