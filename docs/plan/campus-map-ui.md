@@ -40,6 +40,27 @@ All campus-map workers must align to this contract:
   - `marketplace-exchange-public-meetup`
 - Every iframe or map embed requires an accessible text fallback URL and readable route/direction text.
 - Map marker opening is best-effort unless Concept3D marker IDs are verified.
+- Reverse-logistics output shape:
+
+```ts
+type ReverseLogisticsDestinationOption = {
+  locationId: CampusLocationId;
+  label: string;
+  reason: string;
+  mapUrl?: string;
+  mapTextFallback: string;
+};
+
+type ReverseLogisticsRecommendation = {
+  primary: ReverseLogisticsDestinationOption;
+  alternatives: ReverseLogisticsDestinationOption[];
+  ruleId: string;
+  confidence: "high" | "medium" | "low";
+  explanation: string;
+  disclaimer: string;
+};
+```
+
 - Shuttle output shape:
 
 ```ts
@@ -138,14 +159,24 @@ Rules:
 
 ### `lib/campus/reverse-logistics.ts`
 
-Plan a pure recommendation helper but do not overbuild logic in the UI phase:
+Plan a pure recommendation helper that returns the public `ReverseLogisticsRecommendation` from `docs/plan/reverse-logistics-routing.md`:
 
 ```ts
-export interface DestinationRecommendation {
-  locationId: string;
-  title: string;
+export interface ReverseLogisticsDestinationOption {
+  locationId: CampusLocationId;
+  label: string;
   reason: string;
-  confidence: "default" | "category" | "repair" | "support";
+  mapUrl?: string;
+  mapTextFallback: string;
+}
+
+export interface ReverseLogisticsRecommendation {
+  primary: ReverseLogisticsDestinationOption;
+  alternatives: ReverseLogisticsDestinationOption[];
+  ruleId: string;
+  confidence: "high" | "medium" | "low";
+  explanation: string;
+  disclaimer: string;
 }
 ```
 
@@ -153,15 +184,16 @@ Rules:
 
 - Return a deterministic fallback such as `marketplace-exchange-public-meetup`.
 - Accept listing category/type/condition as optional inputs.
-- UI receives the recommendation as a card slot; the recommendation logic can be minimal in V1.
+- UI receives the full recommendation as a card slot, including primary destination, alternatives, rule ID, confidence, explanation, and disclaimer. A destination option is only an internal nested shape, not the public module result.
 
 ### `lib/campus/shuttle-routes.ts`
 
-Expose a slot-compatible helper returning `ShuttleRecommendation`. V1 can return a hardcoded public-data recommendation for known route pairs with `recommended: true` or the same non-null route shape with `recommended: false` when no useful shuttle suggestion is available.
+Expose a slot-compatible helper returning non-null `ShuttleRecommendation`. V1 returns a hardcoded public-data recommendation for `village` -> `ilab-building-1-room-113` and `village` -> `student-services-building`, or the same non-null route shape with `recommended: false` when no useful shuttle suggestion is available.
 
 Rules:
 
 - Output shape must be exactly `recommended, routeId, fromStop, toStop, walkMinutes, rideMinutes, reason, sourceUrl`, with `fromStop` and `toStop` carrying canonical campus location IDs rather than display names.
+- Reverse-direction shuttle trips return `recommended: false` unless a later branch explicitly adds reverse-direction copy.
 - UI must treat it as advisory copy, not live transit status.
 - The card should be green-themed but restrained, matching marketplace palette rather than becoming the dominant visual element.
 
@@ -246,7 +278,7 @@ Apply the same picker behavior to `app/marketplace/[id]/edit/page.tsx`:
 | Search no results | Show no-results copy plus official Concept3D search fallback link. |
 | Iframe blocked | Keep all map actions usable through fallback links and text directions. |
 | Missing marker ID | Use search/query URL and copy that marker opening is best-effort. |
-| Shuttle unavailable | Hide the card or show a compact "No useful shuttle route for this pickup" message, depending on layout density. |
+| Shuttle not recommended | Hide the visible shuttle card or show a compact "No useful shuttle route for this pickup" message from the non-null `ShuttleRecommendation`, depending on layout density. |
 
 ### Listing Detail
 
@@ -307,8 +339,8 @@ Files:
 
 Steps:
 
-- Add deterministic destination recommendation helper with a default public meetup fallback.
-- Add shuttle helper returning the exact shared output shape or `null`.
+- Add deterministic destination recommendation helper returning the full `ReverseLogisticsRecommendation` with a default public meetup fallback.
+- Add shuttle helper returning the exact shared non-null output shape for both recommended and non-recommended cases.
 - Unit-test fallback recommendation, repair/support category recommendations, and shuttle shape.
 - Run `npm run test -- tests/unit/campus/reverse-logistics.test.ts tests/unit/campus/shuttle-routes.test.ts`.
 

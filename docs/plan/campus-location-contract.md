@@ -2,7 +2,7 @@
 
 This is the canonical planning contract for Campus Map, Reverse Logistics, and Green Shuttle work. It is intended for separate worktrees to implement against the same hardcoded V1 shapes without coordinating through database migrations.
 
-If another planning doc conflicts with this file, this file wins for campus location IDs, Concept3D map URL behavior, shuttle recommendation shape, and listing-location compatibility. The platform listing contract still wins for existing Marketplace ownership and table names.
+If another planning doc conflicts with this file, this file wins for campus location IDs, campus data shapes, Concept3D map URL behavior, shuttle recommendation shape, reverse-logistics public output shape, and listing-location compatibility. The platform listing contract still wins for existing Marketplace ownership and table names.
 
 ## 0. Scope
 
@@ -160,19 +160,28 @@ Canonical fallback URLs:
 
 Reverse logistics maps repair and reuse intent to known campus destinations. It does not decide business policy, prices, availability, or staff schedules.
 
-Required output shape:
+Required public output shape:
 
 ```ts
-export interface ReverseLogisticsOption {
-  destinationId: CampusLocationId;
-  destinationName: string;
-  types: CampusLocationType[];
+export interface ReverseLogisticsDestinationOption {
+  locationId: CampusLocationId;
+  label: string;
   reason: string;
-  directions: string;
-  mapUrl: string;
-  sourceUrl?: string;
+  mapUrl?: string;
+  mapTextFallback: string;
+}
+
+export interface ReverseLogisticsRecommendation {
+  primary: ReverseLogisticsDestinationOption;
+  alternatives: ReverseLogisticsDestinationOption[];
+  ruleId: string;
+  confidence: "high" | "medium" | "low";
+  explanation: string;
+  disclaimer: string;
 }
 ```
+
+`ReverseLogisticsDestinationOption` is an internal nested option shape inside the public `ReverseLogisticsRecommendation`. Public callers should not return only a destination option because UI needs the rule ID, confidence, explanation, and disclaimer.
 
 Routing expectations:
 
@@ -224,8 +233,8 @@ export const MAIN_CAMPUS_VILLAGE_DEMO_ROUTE = {
   fromStop: "village",
   toStop: "student-services-building",
   onwardDestinationId: "ilab-building-1-room-113",
-  rideMinutes: 10,
-  walkMinutes: 6,
+  rideMinutes: 8,
+  walkMinutes: 4,
   sourceUrl:
     "https://www.cpp.edu/transportation/commuting-to-campus/bronco-shuttle.shtml",
   notes: [
@@ -239,7 +248,8 @@ export const MAIN_CAMPUS_VILLAGE_DEMO_ROUTE = {
 
 Recommendation behavior:
 
-- Recommend the demo shuttle when the origin is `village` and the target is `ilab-building-1-room-113` or another main-campus repair/reuse destination where the SSB stop gives a reasonable walking path.
+- Recommend the demo shuttle only when the origin is `village` and the target is `ilab-building-1-room-113` or `student-services-building`.
+- Return `recommended: false` for reverse-direction trips unless a later branch explicitly adds reverse-direction copy.
 - Return `recommended: false` when the origin or destination does not benefit from the demo route.
 - `reason` must include enough plain text for a user to understand the recommendation without opening the map.
 - `sourceUrl` must always be the official CPP shuttle page.

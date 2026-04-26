@@ -12,7 +12,7 @@ Canonical companion docs:
 
 | Doc | Purpose |
 |---|---|
-| `docs/plan/campus-location-contract.md` | Shared campus location IDs, display names, coordinates, categories, and listing compatibility rules. |
+| `docs/plan/campus-location-contract.md` | Shared campus location IDs, display names, data/API shapes, Concept3D fallback behavior, and listing compatibility rules. |
 | `docs/plan/campus-map-ui.md` | Map and location-selector UI behavior. |
 | `docs/plan/reverse-logistics-routing.md` | Category-to-campus-destination routing rules. |
 | `docs/plan/green-shuttle-routing.md` | Shuttle route model, demo estimates, and public-source boundaries. |
@@ -112,7 +112,7 @@ The initial canonical IDs are:
 | `bronco-bookstore-tech-building-66` | Bookstore/Bronco Tech destination for repair help or replacement parts. |
 | `marketplace-exchange-public-meetup` | Public meetup fallback for still-usable exchange. |
 
-`docs/plan/campus-location-contract.md` owns final display names, addresses, coordinates, categories, accessibility notes, and aliases. This umbrella doc owns only the coordination requirement that these IDs remain stable.
+`docs/plan/campus-location-contract.md` owns final display names, location types, campus areas, Concept3D fallback metadata, directions, accessibility notes, and API/data shapes. It does not freeze coordinates, aliases, or Concept3D marker IDs unless those fields are explicitly defined there. This umbrella doc owns only the coordination requirement that these IDs remain stable.
 
 ### Reverse-Logistics Rules
 
@@ -125,7 +125,7 @@ The V1 deterministic routing contract is:
 | `repair help/replacement parts` | Bookstore/Bronco Tech or IT Tech Help. |
 | `still usable` | Marketplace exchange. |
 
-Subsystem docs may refine labels and ranking, but they must preserve these broad routes unless the umbrella spec is updated.
+Subsystem docs may refine display copy and ranking, but they must preserve these broad routes and the public `ReverseLogisticsRecommendation` result shape from `docs/plan/reverse-logistics-routing.md` unless the umbrella spec is updated.
 
 ### Green Shuttle Demo Route
 
@@ -141,7 +141,8 @@ Source boundary:
 
 - Official shuttle source: <https://www.cpp.edu/transportation/commuting-to-campus/bronco-shuttle.shtml>
 - The CPP page lists Main Campus/Village Shuttle stops including The Village and Student Services Building.
-- The CPP page states the live Bronco Express tracker is beta, so V1 must phrase shuttle information as an estimate and provide a source link.
+- V1 must phrase shuttle information as an 8 minute ride plus 4 minute walk estimate and provide a source link; it must not claim live shuttle facts, live ETA, or verified operating status.
+- V1 visible shuttle cards are limited to `village` -> `ilab-building-1-room-113` and `village` -> `student-services-building`. Reverse-direction trips return `recommended: false` unless a later branch explicitly adds reverse-direction copy.
 
 ## Dependency Graph
 
@@ -193,7 +194,7 @@ Shared-file policy:
 
 ## Task Sequencing
 
-1. Lock the five subsystem docs enough for field names, module exports, and UI fallback language.
+1. Lock the six campus planning docs enough for field names, module exports, authority, worktree ownership, and UI fallback language. This Stage 1 contract-lock work happens on `feat/map-main`; implementation lanes must fan out only from the resulting commit SHA.
 2. Add `lib/campus/locations.ts` with the seven canonical IDs and lookup helpers.
 3. Add `pickupLocationId?: string` to listing types, fixtures, and seed data without changing `pickupLocation`.
 4. Add `lib/campus/reverse-logistics.ts` with deterministic recommendations.
@@ -205,10 +206,12 @@ Shared-file policy:
 
 ## Cross-Doc Compatibility Rules
 
-- If a subsystem doc conflicts with this umbrella doc on `pickupLocation`, `pickupLocationId`, location IDs, module names, or V1 data source boundaries, this umbrella doc wins until all workers agree to update it.
+- If a subsystem doc conflicts with `docs/plan/campus-location-contract.md` on data or API shapes, `campus-location-contract.md` wins.
+- If a subsystem doc conflicts with this umbrella doc on orchestration, sequencing, implementation worktree boundaries, or cut rules, this umbrella doc wins until all workers agree to update it.
 - If `platform-feature-contracts.md` conflicts with this doc on Marketplace table/API ownership, `platform-feature-contracts.md` wins.
 - If `architecture.md` conflicts with this doc on repo ownership, freeze protocol, or cut rules, `architecture.md` wins.
 - Subsystem docs may add fields, helper functions, UI states, and test cases, but they must keep the canonical IDs and optional listing field policy.
+- Implementation worktrees must branch from the `feat/map-main` contract-lock commit SHA recorded by the Task 1 commit, then use the lane worktree paths from `docs/superpowers/specs/2026-04-26-campus-location-orchestration-design.md`.
 - Public copy must distinguish "recommended destination" from "guaranteed dropoff accepted here."
 - Shuttle copy must distinguish "estimated route" from "live shuttle arrival."
 

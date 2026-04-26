@@ -21,7 +21,7 @@ Do not create route claims beyond what official sources publish. If an exact acc
 
 ### In Scope For V1
 
-- Hardcoded public pickup location catalog with stable IDs, labels, short descriptions, and official source URLs where available.
+- Hardcoded public pickup location catalog using the canonical `CampusLocation` shape from [`campus-location-contract.md`](campus-location-contract.md), with display labels and short descriptions derived for UI where needed.
 - Location picker for listing creation and reverse-logistics suggestions.
 - Text-only location details that work without map iframe support.
 - Green Shuttle guidance based on public shuttle stops and schedules.
@@ -176,14 +176,16 @@ Rules:
 - Where shuttle stops are mentioned, link to the Bronco Express Shuttle page and label estimates as schedule-based or approximate.
 - Keep DRC links informational; do not imply DRC approves marketplace meetups or shuttle recommendations.
 
-Location cards should include this field model:
+Location cards should derive from the canonical `CampusLocation` model. UI-only fields may be projected for rendering, but they must not replace the shared campus data contract:
 
 ```ts
-type PublicCampusLocation = {
-  id: string;
-  label: string;
+type PublicCampusLocationView = {
+  id: CampusLocationId;
+  name: string;
+  types: CampusLocationType[];
+  campusArea: CampusArea;
   publicDescription: string;
-  cppMapUrl?: string;
+  cppMapUrl: string;
   cppTextMapUrl?: string;
   accessibilityResourceUrl?: string;
   shuttleResourceUrl?: string;

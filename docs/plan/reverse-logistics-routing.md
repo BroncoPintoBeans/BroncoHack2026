@@ -27,7 +27,7 @@ Create these hardcoded modules in implementation worktrees:
 
 | Module | Responsibility |
 |---|---|
-| `lib/campus/locations.ts` | Canonical campus location records, display names, text fallback, aliases, and optional category tags. |
+| `lib/campus/locations.ts` | Canonical campus location records using the richer `CampusLocation` shape from `docs/plan/campus-location-contract.md`: IDs, names, types, campus areas, Concept3D fallback targets, directions, accessibility notes, and optional source URLs. |
 | `lib/campus/concept3d.ts` | Concept3D URL builder and map-link helper. All map links must go through this module. |
 | `lib/campus/reverse-logistics.ts` | Deterministic item-to-destination rules, priority order, explanation copy, and output assembly. |
 | `lib/campus/shuttle-routes.ts` | Public shuttle-route hints if shown near recommendations. V1 should keep this independent from recommendation correctness. |
@@ -169,7 +169,7 @@ V1 must not recommend disposal paths for hazardous waste, batteries, chemicals, 
 | Case | Behavior |
 |---|---|
 | Missing title/category/description | Return unknown fallback with `confidence='low'`. |
-| Existing listing has only `pickupLocation` | Preserve the string and do not infer a `pickupLocationId` unless it exactly matches a known alias. |
+| Existing listing has only `pickupLocation` | Preserve the string. Do not infer a `pickupLocationId` from free text unless a later contract explicitly defines aliases and exact-match behavior. |
 | Unknown `pickupLocationId` | Ignore enrichment, keep `pickupLocation`, and log or surface a non-blocking validation warning in tests. |
 | Item is usable but also says repair or parts | Route to repair/parts because safety and help intent outrank exchange. |
 | Electronics item asks for both troubleshooting and parts | Primary `it-tech-help-library-2f`; include `bronco-bookstore-tech-building-66` alternative. If `partsNeed=true`, swap primary and alternative. |
