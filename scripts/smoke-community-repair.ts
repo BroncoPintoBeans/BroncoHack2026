@@ -196,15 +196,18 @@ async function run() {
   );
 
   await check(
-    "10. No marketplace/Gemini/external network calls made",
+    "10. Marketplace listings endpoint is available",
     async () => {
       const listingsRes = await fetch(`${BASE}/api/listings`, {
         headers: headers(OWNER),
       });
-      if (listingsRes.status !== 404)
+      if (listingsRes.status !== 200)
         throw new Error(
-          `/api/listings should not exist (got ${listingsRes.status})`
+          `/api/listings should return 200 (got ${listingsRes.status})`
         );
+      const listingsBody = await listingsRes.json();
+      if (!Array.isArray(listingsBody.items))
+        throw new Error("/api/listings should return an items array");
     }
   );
 

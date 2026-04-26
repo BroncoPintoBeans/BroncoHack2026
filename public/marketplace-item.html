@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Listing — Bronco Repair Desk (Static)</title>
+  <style>
+    body{font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial; background:#f9faf2;color:#1a1c18}
+    .container{max-width:900px;margin:32px auto;padding:16px}
+    .gallery{display:flex;gap:12px}
+    .main-img{width:60%;height:420px;background:#fff;border-radius:12px;overflow:hidden}
+    .thumbs{width:36%;display:flex;flex-direction:column;gap:8px}
+    .thumbs img{height:80px;object-fit:cover;border-radius:8px}
+    .price{font-size:22px;font-weight:700}
+    .repair-bullet{width:10px;height:10px;background:#1b4332;display:inline-block;margin-right:8px}
+    .wishlist{padding:8px 12px;border-radius:8px;border:1px solid #c1c8c2;cursor:pointer}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <a href="/marketplace.html">← Back to marketplace</a>
+    <div id="content"></div>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(location.search);
+    const id = params.get('id') || 'macbook-pro';
+    // same sample data (should mirror public/marketplace.html)
+    const items = {
+      'vintage-road-bike': { id:'vintage-road-bike', title:'Vintage Road Bike', img:'https://www.figma.com/api/mcp/asset/35e5ed29-e59c-4710-a888-21f11a1394a4', desc:'Needs a new chain and some tire patching, but otherwise solid frame.', priceCents:4500, condition:'Fair' },
+      'mini-fridge': { id:'mini-fridge', title:'Mini Fridge', img:'https://www.figma.com/api/mcp/asset/4ab76670-f761-46a7-9f88-6fad6dd3109f', desc:'Trading for a microwave. Works perfectly.', priceCents:null, condition:'Like New' },
+      'bio-textbooks': { id:'bio-textbooks', title:'Bio 101 Textbooks', img:'https://www.figma.com/api/mcp/asset/2892c185-1b33-4075-808a-a63cb5e27dcc', desc:'Some highlighting, but all pages intact.', priceCents:0, condition:'Good' },
+      'macbook-pro': { id:'macbook-pro', title:'Older Macbook Pro', img:'https://www.figma.com/api/mcp/asset/60147299-9838-4982-8155-e0593c5b8423', desc:'Battery needs replacing soon, runs a bit slow.', priceCents:12000, previousPriceCents:15000, condition:'Fair' }
+    };
+
+    function formatPrice(cents){ if (cents===null||cents===undefined) return 'Trade'; if (cents===0) return 'Free'; return `$${Math.round(cents/100)}` }
+    function computeEco(item){ const now=Date.now(); const created=new Date(item.createdAt||'2026-02-10T09:00:00Z').getTime(); const ageDays=Math.max(0,(now-created)/(1000*60*60*24)); const ageFactor=1+Math.min(365,ageDays)/365; const conditionFactor = item.condition==='Like New'?1:item.condition==='Good'?1.2:1.5; const base=(item.priceCents&&item.priceCents>0)?Math.max(1,item.priceCents/100/10):1; return Math.max(1,Math.round(base*conditionFactor*ageFactor)) }
+
+    const item = items[id] || items['macbook-pro'];
+    const content = document.getElementById('content');
+
+    content.innerHTML = `
+      <h1>${item.title}</h1>
+      <div class="gallery">
+        <div class="main-img"><img src="${item.img}" style="width:100%;height:100%;object-fit:cover"/></div>
+        <div class="thumbs">
+          <img src="${item.img}"/>
+          <img src="${item.img}"/>
+          <img src="${item.img}"/>
+        </div>
+      </div>
+      <div style="margin-top:12px;display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div class="price">${formatPrice(item.priceCents)}</div>
+          <div style="margin-top:8px;color:#374151">${item.desc}</div>
+          <ul style="margin-top:12px">
+            <li><span class="repair-bullet"></span>Estimated repairs: battery replacement ($50)</li>
+            <li>Condition: ${item.condition}</li>
+            <li>Location: North Quad</li>
+          </ul>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end">
+          <button id="wishlistBtn" class="wishlist">♡ Save</button>
+          <a href="/messages" class="wishlist" style="text-decoration:none;display:inline-block;padding:8px 12px">Message Seller</a>
+        </div>
+      </div>
+    `;
+
+    const wishlistBtn = document.getElementById('wishlistBtn');
+    let wish = [];
+    try{ wish = JSON.parse(localStorage.getItem('wishlist_ids')||'[]') }catch(e){}
+    if(wish.includes(item.id)){ wishlistBtn.innerText = '♥ Saved'; wishlistBtn.style.background='#1b4332'; wishlistBtn.style.color='white' }
+    wishlistBtn.addEventListener('click',()=>{ const exists = wish.includes(item.id); wish = exists? wish.filter(x=>x!==item.id):[...wish,item.id]; localStorage.setItem('wishlist_ids',JSON.stringify(wish)); wishlistBtn.innerText = wish.includes(item.id)?'♥ Saved':'♡ Save'; wishlistBtn.style.background = wish.includes(item.id)?'#1b4332':'white'; wishlistBtn.style.color = wish.includes(item.id)?'white':'#1b4332' })
+  </script>
+</body>
+</html>

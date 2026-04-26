@@ -1,3 +1,4 @@
+import BackButton from "@/components/BackButton";
 import Navbar from "@/components/Navbar";
 
 const achievements = [
@@ -21,6 +22,7 @@ export default function RewardsPage() {
     <div className="min-h-screen bg-[#f9faf2]">
       <Navbar />
       <div className="max-w-[1280px] mx-auto px-6 py-12 flex flex-col gap-10">
+        <BackButton fallbackHref="/home" label="Back to Home" />
         {/* Header */}
         <div>
           <h1 className="font-bold text-[#012d1d] text-[32px] tracking-[-0.64px]">Rewards &amp; Impact</h1>
