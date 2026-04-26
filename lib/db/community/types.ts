@@ -28,6 +28,7 @@ export interface DiagnosisRow {
   confidence: number;
   missing_evidence: string[];
   safety_flags: string[];
+  technician_questions: string[];
   created_at: string;
 }
 
@@ -64,6 +65,15 @@ export interface CaseEventRow {
   status: string;
   payload: Record<string, unknown>;
   created_at: string;
+}
+
+export interface HelperRoutingResultRow {
+  run_id: string;
+  case_id: string;
+  user_id: string;
+  matches: unknown[];
+  created_at: string;
+  updated_at: string;
 }
 
 export interface HelperRequestRow {
@@ -136,6 +146,7 @@ export interface InMemoryStore {
   verdicts: Map<string, VerdictRow>;
   action_plans: Map<string, ActionPlanRow>;
   case_events: Map<string, CaseEventRow>;
+  helper_routing_results: Map<string, HelperRoutingResultRow>;
   helper_requests: Map<string, HelperRequestRow>;
   helper_request_offers: Map<string, HelperRequestOfferRow>;
   conversations: Map<string, ConversationRow>;

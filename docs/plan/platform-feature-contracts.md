@@ -52,6 +52,7 @@ Diagnose tables:
 | `diagnoses` | Diagnosis agent output, one complete row per run. |
 | `verdicts` | Economics/RRR output, one complete row per run. |
 | `action_plans` | Action-plan output, including safety preamble. |
+| `helper_routing_results` | Helper-routing agent match output, one private result row per run. |
 | `helper_requests` | Community repair/help request attached to a case. |
 | `category_reference` | Repair category lookup data, cost bands, and safety warning copy. |
 
@@ -84,9 +85,9 @@ Shared infrastructure supports both product features. Feature routes may use the
 |---|---|---|
 | `POST /api/cases`, `GET/PATCH /api/cases/:id` | Agent Council Diagnose | `cases` |
 | `POST /api/cases/:id/media` | Agent Council Diagnose | `case_media` |
-| `POST /api/cases/:id/run`, `POST /api/cases/:id/runs/:runId/followup` | Agent Council Diagnose | `case_runs`, `case_messages`, `case_events`, `diagnoses`, `verdicts`, `action_plans` |
-| `GET /api/cases/:id/current` | Agent Council Diagnose | `current_case_outputs` view over Diagnose tables |
-| `POST /api/helpers` | Agent Council Diagnose | `helper_requests`, optionally `conversations`, `conversation_participants`, `messages` |
+| `POST /api/cases/:id/run`, `POST /api/cases/:id/runs/:runId/followup` | Agent Council Diagnose | `case_runs`, `case_messages`, `case_events`, `diagnoses`, `verdicts`, `action_plans`, `helper_routing_results` |
+| `GET /api/cases/:id/current` | Agent Council Diagnose | `current_case_outputs` view over Diagnose tables and `helper_routing_results` |
+| `POST /api/helpers` | Community Repair | `helper_requests`, optionally `conversations`, `conversation_participants`, `messages` |
 | `GET/POST /api/listings`, `GET/PATCH /api/listings/:id` | Marketplace | `marketplace_listings` |
 | `POST /api/listings/:id/media` | Marketplace | `marketplace_media` |
 | `POST/PATCH /api/listings/:id/bids` | Marketplace | `marketplace_bids` |
@@ -110,3 +111,9 @@ The following names are stale planning aliases and should not appear in new sche
 | `points_events` / `user_point_events` | `point_transactions` |
 | `redemptions` | `reward_redemptions` |
 | `achievements` table | Derived badge state from `point_transactions`; no table. |
+
+## Case Media Model
+
+`case_media.storage_path` should be treated as a Supabase Storage bucket path in production. The current demo may place external URLs in `storage_path` for compatibility, but production code should not depend on that behavior.
+
+If external media must remain supported, add an explicit external-media field or table, such as `external_url` plus `source`, rather than overloading `storage_path`. This keeps storage authorization, signed URL generation, and media cleanup predictable.

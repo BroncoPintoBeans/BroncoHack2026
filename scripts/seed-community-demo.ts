@@ -77,6 +77,10 @@ export function seedCommunityDemo(): void {
     confidence: 0.87,
     missing_evidence: ["Serial number age confirmation"],
     safety_flags: [],
+    technician_questions: [
+      "Does the display dim or flicker only after the lid passes a certain angle?",
+      "Has the laptop had any recent drops, liquid exposure, or display repairs?",
+    ],
     created_at: "2025-03-01T10:02:00.000Z",
   };
   store.diagnoses.set(diagnosisRow.id, diagnosisRow);
@@ -143,6 +147,7 @@ export function seedCommunityDemo(): void {
       confidence: diagnosisRow.confidence,
       missing_evidence: diagnosisRow.missing_evidence,
       safety_flags: diagnosisRow.safety_flags,
+      technician_questions: diagnosisRow.technician_questions,
     },
     verdict_snapshot: {
       rrr_score: verdictRow.rrr_score,
