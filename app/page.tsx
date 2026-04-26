@@ -4,13 +4,27 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
+const RESET_LINK_EXPIRED_MESSAGE = "Your password reset link has expired. Please request a new one.";
+
+function getResetLinkError() {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const queryParams = new URLSearchParams(window.location.search);
+  const errorCode = queryParams.get("error_code");
+  const errorDescription = queryParams.get("error_description");
+
+  return errorCode === "otp_expired" || errorDescription ? RESET_LINK_EXPIRED_MESSAGE : null;
+}
+
 export default function SignInPage() {
   const router = useRouter();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(getResetLinkError);
   const [notice, setNotice] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
@@ -22,11 +36,8 @@ export default function SignInPage() {
     const isRecoveryHash = hashParams.get("type") === "recovery" || hashParams.has("access_token");
     const isRecoveryQuery = queryParams.get("type") === "recovery";
     const code = queryParams.get("code");
-    const errorCode = queryParams.get("error_code");
-    const errorDescription = queryParams.get("error_description");
 
-    if (errorCode === "otp_expired" || errorDescription) {
-      setError("Your password reset link has expired. Please request a new one.");
+    if (getResetLinkError()) {
       window.history.replaceState({}, "", "/");
       return;
     }

@@ -129,6 +129,7 @@ export function seedCommunityDemo(): void {
     id: HELPER_REQUEST_ID,
     case_id: CASE_ID,
     run_id: RUN_ID,
+    report_id: null,
     user_id: OWNER_USER_ID,
     title: "Need help replacing MacBook Pro display cable (Flexgate)",
     public_summary:
@@ -276,6 +277,7 @@ export function seedCommunityDemo(): void {
     id: RESOLVED_REQUEST_ID,
     case_id: RESOLVED_CASE_ID,
     run_id: RESOLVED_RUN_ID,
+    report_id: null,
     user_id: OWNER_USER_ID,
     title: "Keyboard replacement for MacBook Air — resolved",
     public_summary: "Needed help replacing keyboard after liquid spill. Issue resolved.",

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import BackButton from "@/components/BackButton";
 import Navbar from "@/components/Navbar";
@@ -67,8 +68,11 @@ function readWishlistIds() {
 }
 
 export default function MarketplaceDetailClient({ item, isOwner }: MarketplaceDetailClientProps) {
+  const router = useRouter();
   const [index, setIndex] = useState(0);
   const [saved, setSaved] = useState(false);
+  const [messageStatus, setMessageStatus] = useState<"idle" | "opening">("idle");
+  const [messageError, setMessageError] = useState("");
   const images = useMemo(
     () => item.media.filter((media) => media.mediaType === "image" && media.url).map((media) => media.url!),
     [item.media]
@@ -93,6 +97,12 @@ export default function MarketplaceDetailClient({ item, isOwner }: MarketplaceDe
     } catch {
       setSaved((current) => !current);
     }
+  };
+
+  const openSellerConversation = async () => {
+    setMessageStatus("opening");
+    setMessageError("");
+    router.push(`/messages?listing=${item.id}`);
   };
 
   if (isOwner) {
@@ -264,21 +274,24 @@ export default function MarketplaceDetailClient({ item, isOwner }: MarketplaceDe
 
             <div className="flex items-center gap-3 p-4 bg-white border border-[#e2e3db] rounded-xl">
               <div className="w-10 h-10 rounded-full bg-[#1b4332] flex items-center justify-center text-white font-semibold">
-                S
+                {(item.sellerName ?? "Seller")[0]?.toUpperCase()}
               </div>
               <div>
-                <p className="font-semibold text-[#1a1c18] text-sm">Campus seller</p>
-                <p className="text-[#717973] text-xs">Listing ID {item.id.slice(0, 8)}</p>
+                <p className="font-semibold text-[#1a1c18] text-sm">{item.sellerName ?? "Seller"}</p>
+                <p className="text-[#717973] text-xs">Seller</p>
               </div>
             </div>
 
             <div className="flex flex-col gap-3">
-              <Link
-                href={`/messages?listing=${item.id}`}
-                className="bg-[#1b4332] text-white text-sm font-semibold tracking-[0.6px] py-4 rounded-xl text-center hover:bg-[#012d1d] transition-colors"
+              <button
+                type="button"
+                onClick={openSellerConversation}
+                disabled={messageStatus === "opening"}
+                className="bg-[#1b4332] text-white text-sm font-semibold tracking-[0.6px] py-4 rounded-xl text-center hover:bg-[#012d1d] transition-colors disabled:opacity-70"
               >
-                Message Seller
-              </Link>
+                {messageStatus === "opening" ? "Opening Chat..." : "Message Seller"}
+              </button>
+              {messageError ? <p className="text-[#b91c1c] text-xs">{messageError}</p> : null}
               <button
                 onClick={toggleSaved}
                 className={`border text-sm font-semibold tracking-[0.6px] py-3 rounded-xl transition-colors ${

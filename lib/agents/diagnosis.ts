@@ -11,6 +11,7 @@ export async function runDiagnosis(
   caseRecord: CaseRecord,
   intakePayload: IntakePayload,
   followupAnswer?: string,
+  maxFollowupsReached = false,
 ): Promise<DiagnosisCompletePayload | DiagnosisAwaitingUserPayload> {
   const client = buildClient('pro')
   if (!client) return mockDiagnosis(ctx, caseRecord)
@@ -27,7 +28,7 @@ Category: ${caseRecord.category}
 Symptoms: ${wrapUserInput(intakePayload.symptoms.join(', '))}
 Inferred confidence: ${intakePayload.confidence}${followupSection}
 
-If you need clarification before diagnosing, set awaitingUser: true and provide a short question.
+${maxFollowupsReached ? 'You have already used the maximum follow-up rounds. Do not ask another question; provide the best-effort complete diagnosis.' : 'If you need clarification before diagnosing, set awaitingUser: true and provide a short question.'}
 IMPORTANT: Also provide 2-5 short answer "options" the user can click (max 40 chars each, no free text).
 The options must be specific, mutually exclusive, and cover the likely answers to your question.
 Example options for "Does the screen flicker when moved?": ["Yes, always", "Only when tilted", "Rarely", "Never"]
@@ -59,6 +60,17 @@ Safety flags to use if applicable: battery_swelling, refrigerant_leak, brake_fai
   }
 
   const payload = result.object
+  if (payload.awaitingUser && maxFollowupsReached) {
+    const fallback: DiagnosisCompletePayload = {
+      awaitingUser: false,
+      rootCause: payload.reason || payload.question,
+      confidence: Math.max(0.35, intakePayload.confidence * 0.8),
+      safetyFlags: [],
+      technicianQuestions: [payload.question],
+    }
+    await ctx.emitEvent('diagnosis', 'complete', fallback)
+    return fallback
+  }
   if (payload.awaitingUser) {
     await ctx.emitEvent('diagnosis', 'awaiting_user', payload)
   } else {

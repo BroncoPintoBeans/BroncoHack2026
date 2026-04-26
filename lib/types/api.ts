@@ -22,7 +22,13 @@ export interface UpdateCaseRequest {
 }
 export interface UpdateCaseResponse { case: CaseRecord }
 
-export interface CreateMediaRequest { url: string; mediaType: 'image' | 'video' }
+export interface CreateMediaRequest {
+  url?: string
+  dataUrl?: string
+  mediaType: 'image' | 'video'
+  fileType?: string
+  fileName?: string
+}
 export interface CreateMediaResponse { media: CaseMediaRecord }
 
 export interface StartRunResponse {

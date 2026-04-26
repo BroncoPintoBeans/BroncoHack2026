@@ -80,6 +80,7 @@ export interface HelperRequestRow {
   id: string;
   case_id: string;
   run_id: string | null;
+  report_id: string | null;
   user_id: string;
   title: string;
   public_summary: string;
@@ -116,6 +117,7 @@ export interface HelperRequestOfferRow {
 export interface ConversationRow {
   id: string;
   case_id: string | null;
+  listing_id?: string | null;
   helper_request_id: string | null;
   helper_request_offer_id: string | null;
   conversation_type: "case_helper" | "listing";

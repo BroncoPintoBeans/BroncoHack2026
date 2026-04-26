@@ -13,6 +13,14 @@ export interface OrchestratorDeps {
   writeVerdict(caseId: string, runId: string, payload: EconomicsPayload): Promise<void>
   writeActionPlan(caseId: string, runId: string, payload: ActionPlanPayload): Promise<void>
   writeHelperRequest(caseId: string, runId: string, payload: HelperRoutingPayload): Promise<void>
+  materializeReport?(input: {
+    caseRecord: CaseRecord
+    runId: string
+    diagnosis: DiagnosisCompletePayload
+    verdict: EconomicsPayload
+    actionPlan: ActionPlanPayload
+    helperRouting: HelperRoutingPayload
+  }): Promise<unknown>
   insertEvent(event: Omit<CaseEventRecord, 'id' | 'createdAt'>): Promise<CaseEventRecord>
 }
 
@@ -40,13 +48,14 @@ export async function runOrchestrator(input: OrchestratorInput): Promise<Orchest
     const intakePayload = await runIntake(ctx, caseRecord)
 
     // Diagnosis (may pause for user input)
-    const diagnosisResult = await runDiagnosis(ctx, caseRecord, intakePayload, followupAnswer)
+    const diagnosisResult = await runDiagnosis(ctx, caseRecord, intakePayload, followupAnswer, runRecord.followupCount >= 2)
 
     if (diagnosisResult.awaitingUser) {
       await input.updateRun(runId, {
         status: 'awaiting_user',
         awaitingQuestion: diagnosisResult.question,
         awaitingOptions: diagnosisResult.options,
+        followupCount: runRecord.followupCount + 1,
       })
       return { status: 'awaiting_user', question: diagnosisResult.question }
     }
@@ -67,6 +76,15 @@ export async function runOrchestrator(input: OrchestratorInput): Promise<Orchest
 
     // Write diagnosis last (after economics has written verdict)
     await input.writeDiagnosis(caseId, runId, diagnosisPayload)
+
+    await input.materializeReport?.({
+      caseRecord,
+      runId,
+      diagnosis: diagnosisPayload,
+      verdict: economicsPayload,
+      actionPlan: actionPlanPayload,
+      helperRouting: helperPayload,
+    })
 
     await input.updateRun(runId, { status: 'complete', currentPhase: 'orchestrator' })
     await ctx.emitEvent('orchestrator', 'complete')
