@@ -6,7 +6,7 @@ Primary app: `bronco-repair-desk/` Next.js 16 App Router.
 
 ## Grounding Notes
 
-This plan defines a V1 demo for recommending a CPP Bronco Shuttle option when a student is making a far-enough cross-campus trip. It is intentionally hardcoded and public-data only. Do not build live shuttle tracking, map routing APIs, private location collection, or real-time navigation in V1.
+This plan defines a V1 demo for recommending a CPP Bronco Shuttle option only for the hardcoded allowlisted origin/destination pairs. It is intentionally hardcoded and public-data only. Do not build live shuttle tracking, map routing APIs, private location collection, or real-time navigation in V1.
 
 Official source for shuttle facts:
 
@@ -21,7 +21,7 @@ Confirmed source facts to preserve in product copy and attribution:
 
 ## Product Intent And Boundaries
 
-Green Shuttle Routing Assist adds a lightweight sustainability nudge to relevant campus flows: if a student's pickup and destination are far enough apart, show a route card that suggests using the public CPP shuttle for part of the trip and walking the short final segment.
+Green Shuttle Routing Assist adds a lightweight sustainability nudge to relevant campus flows: for the two V1 allowlisted origin/destination pairs, show a route card that suggests using the public CPP shuttle for part of the trip and walking the short final segment.
 
 V1 supports only the demo route:
 
@@ -49,7 +49,7 @@ The following new hardcoded modules are the shared canonical implementation targ
 
 | File | Responsibility |
 |---|---|
-| `lib/campus/locations.ts` | Hardcoded campus location records, campus areas, approximate coordinates or ordering hints, and the seven canonical location IDs from `docs/plan/campus-location-contract.md`. |
+| `lib/campus/locations.ts` | Hardcoded campus location records using the richer canonical `CampusLocation` shape and seven canonical location IDs from `docs/plan/campus-location-contract.md`. |
 | `lib/campus/shuttle-routes.ts` | Hardcoded shuttle route records, stop IDs, estimate copy, official source URLs, and recommendation function. |
 | `lib/campus/concept3d.ts` | Optional public-data adapter for stable Concept3D/deep-link metadata if frontend wants to link campus places. No network calls in V1. |
 
@@ -59,7 +59,7 @@ These files should be self-contained and safe to import from server or client co
 
 ### Location IDs
 
-Use these exact IDs in fixtures, UI state, and tests:
+Use the seven exact IDs from `docs/plan/campus-location-contract.md` in fixtures, UI state, and tests. The shuttle demo actively uses these three IDs:
 
 | ID | Display name | Campus area | Purpose |
 |---|---|---|---|
@@ -67,17 +67,9 @@ Use these exact IDs in fixtures, UI state, and tests:
 | `student-services-building` | Student Services Building | `main-campus` | Demo shuttle drop-off stop. |
 | `ilab-building-1-room-113` | iLab, Building 1 Room 113 | `main-campus` | Demo destination after final walk. |
 
-Suggested TypeScript shape:
+Canonical TypeScript shape:
 
 ```ts
-export type CampusArea =
-  | "west"
-  | "main-campus"
-  | "library"
-  | "bookstore"
-  | "marketplace"
-  | "unknown";
-
 export type CampusLocationId =
   | "village"
   | "student-services-building"
@@ -87,14 +79,43 @@ export type CampusLocationId =
   | "bronco-bookstore-tech-building-66"
   | "marketplace-exchange-public-meetup";
 
-export type CampusLocation = {
-  id: CampusLocationId;
+export type CampusLocationType =
+  | "pickup_zone"
+  | "shuttle_stop"
+  | "map_landmark"
+  | "repair_destination"
+  | "reuse_destination"
+  | "parts_destination"
+  | "meetup_zone";
+
+export type CampusArea =
+  | "west"
+  | "main-campus"
+  | "library"
+  | "bookstore"
+  | "marketplace";
+
+export interface Concept3DMapTarget {
+  mapId: "1130";
+  markerId?: string;
+  url: string;
+  fallbackUrl: string;
   label: string;
+}
+
+export interface CampusLocation {
+  id: CampusLocationId;
+  name: string;
+  types: CampusLocationType[];
   campusArea: CampusArea;
-  approximateWalkMinutesFromVillage?: number;
-  concept3dSlug?: string;
-};
+  concept3d: Concept3DMapTarget;
+  directions: string;
+  accessibilityNote: string;
+  sourceUrl?: string;
+}
 ```
+
+Do not use the obsolete lighter shuttle-only model with `label`, `concept3dSlug`, or `CampusArea | "unknown"`. UI labels and route grouping must be derived from the canonical registry fields.
 
 ### Shuttle Route
 
@@ -154,7 +175,7 @@ export type ShuttleRecommendation = {
 
 `routeId`, `fromStop`, and `toStop` must remain populated even when `recommended` is `false` so UI, tests, and analytics never need a nullable transport shape. Use the demo route and canonical stops with `walkMinutes: 0` and `rideMinutes: 0` for negative cases.
 
-Required positive output for the demo trip:
+Required positive output for `village` -> `ilab-building-1-room-113`:
 
 ```ts
 {
@@ -169,6 +190,21 @@ Required positive output for the demo trip:
 }
 ```
 
+Required positive output for `village` -> `student-services-building`:
+
+```ts
+{
+  recommended: true,
+  routeId: "main-campus-village-demo",
+  fromStop: "village",
+  toStop: "student-services-building",
+  walkMinutes: 0,
+  rideMinutes: 8,
+  reason: "Estimated shuttle ride from The Village to the official Student Services Building shuttle stop.",
+  sourceUrl: "https://www.cpp.edu/transportation/commuting-to-campus/bronco-shuttle.shtml"
+}
+```
+
 Required negative output shape:
 
 ```ts
@@ -179,40 +215,36 @@ Required negative output shape:
   toStop: "student-services-building",
   walkMinutes: 0,
   rideMinutes: 0,
-  reason: "Trip is not far enough across campus for the demo shuttle recommendation.",
+  reason: "Trip is outside the V1 demo shuttle allowlist.",
   sourceUrl: "https://www.cpp.edu/transportation/commuting-to-campus/bronco-shuttle.shtml"
 }
 ```
 
-## Recommendation Threshold
+## Recommendation Allowlist
 
-Use a deterministic threshold so backend, frontend, and tests agree.
+Use a deterministic V1 allowlist so backend, frontend, and tests agree.
 
-Primary rule:
+Active V1 rule:
 
-- Recommend the demo shuttle only when one endpoint is in `campusArea = "west"` and the other endpoint is in `campusArea = "main-campus"`.
+- Recommend the demo shuttle only for `village` -> `ilab-building-1-room-113` and `village` -> `student-services-building`.
 
-Secondary rule:
+Negative cases:
 
-- If both locations include approximate walk data, recommend when the direct walk estimate is `>= 12` minutes.
-
-Tie-breaking:
-
-- The campus-area rule wins for known V1 IDs.
-- The approximate-walk rule is only a fallback for future hardcoded public-data locations.
+- Reverse-direction trips return `recommended: false` unless a later branch explicitly adds reverse-direction copy.
 - Same-area trips return `recommended: false`.
 - Unknown locations return `recommended: false`.
+- All trips outside the two active V1 route pairs return `recommended: false`; do not add a direct-walk minute rule in V1.
 
 Expected V1 cases:
 
 | Pickup | Destination | Result | Reason |
 |---|---|---|---|
 | `village` | `ilab-building-1-room-113` | Recommend | Village to main-campus cross-campus trip. |
-| `ilab-building-1-room-113` | `village` | Recommend | Same route can be presented in reverse only if UI copy says estimates are directional demo estimates. |
+| `ilab-building-1-room-113` | `village` | Do not recommend | Reverse-direction copy is not part of V1. |
 | `student-services-building` | `ilab-building-1-room-113` | Do not recommend | Final walk segment is short and same-side campus travel. |
 | `village` | `student-services-building` | Recommend | Village to official shuttle stop across campus. |
 
-If implementation does not support reverse route display cleanly, V1 may restrict the visible demo to `village` -> `ilab-building-1-room-113`; tests should then assert reverse returns `recommended: false` with a clear reason.
+V1 must restrict visible shuttle cards to `village` -> `ilab-building-1-room-113` and `village` -> `student-services-building`; tests should assert reverse returns `recommended: false` with a clear reason.
 
 ## Demo Route Card Behavior
 
@@ -335,9 +367,9 @@ Steps:
 1. Define `ShuttleRoute` and `ShuttleRecommendation`.
 2. Add `MAIN_CAMPUS_VILLAGE_DEMO_ROUTE`.
 3. Implement `getShuttleRecommendation({ pickupId, destinationId })`.
-4. Return the exact positive shape for `village` -> `ilab-building-1-room-113`.
-5. Return the exact negative shape for short, same-area, and unknown-location trips, with non-null route and stop IDs plus zeroed estimate fields.
-6. Add tests for route ID, stop names, source URL, estimate values, and threshold behavior.
+4. Return the exact positive shapes for `village` -> `ilab-building-1-room-113` and `village` -> `student-services-building`.
+5. Return the exact negative shape for reverse and all non-allowlisted trips, with non-null route and stop IDs plus zeroed estimate fields.
+6. Add tests for route ID, stop names, source URL, estimate values, allowlisted positive cases, and non-allowlisted negative cases.
 
 ### Task 3: Add Optional Concept3D Public-Data Helpers
 
@@ -386,7 +418,7 @@ Steps:
 | Test | Expected assertion |
 |---|---|
 | Location fixture completeness | All three canonical IDs resolve. |
-| Campus-area threshold | `village` -> `ilab-building-1-room-113` recommends shuttle. |
+| Allowlisted iLab trip | `village` -> `ilab-building-1-room-113` recommends shuttle. |
 | Short walk suppression | `student-services-building` -> `ilab-building-1-room-113` does not recommend shuttle. |
 | Route facts | Route ID, name, from stop, to stop, and source URL match the canonical contract. |
 | Estimate labeling | UI displays estimated ride and walk time, not live ETA. |
@@ -398,4 +430,4 @@ Steps:
 
 This plan is compatible with separate worktrees because it creates new `lib/campus/**` modules and a self-contained UI card contract. Shared implementation workers should not modify `lib/types/**` just to support V1; the shuttle recommendation type can live in `lib/campus/shuttle-routes.ts` until the shape is frozen by implementation.
 
-If another worktree adds route selection or campus map work, it should consume `getShuttleRecommendation` rather than duplicate the threshold or hardcoded route facts.
+If another worktree adds route selection or campus map work, it should consume `getShuttleRecommendation` rather than duplicate the allowlist or hardcoded route facts.

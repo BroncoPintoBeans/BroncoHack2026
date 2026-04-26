@@ -25,6 +25,7 @@ export interface HelperRequest {
   id: string;
   case_id: string;
   run_id: string | null;
+  report_id: string | null;
   user_id: string;
   title: string;
   public_summary: string;
@@ -48,6 +49,7 @@ export interface HelperRequest {
 export interface HelperRequestCard {
   id: string;
   case_id: string;
+  report_id: string | null;
   title: string;
   public_summary: string;
   category: string;

@@ -2,6 +2,7 @@ import { randomUUID } from "crypto";
 import { store } from "@/lib/db/community/store";
 import { helperRequestRepository } from "@/lib/db/community/helper-request-repository";
 import { buildContextSnapshot } from "./context-snapshot";
+import { getLatestCaseReportOrThrow } from "@/lib/db/queries/reports";
 import type { HelperRequestDetail } from "@/lib/types/community";
 import type { CaseEventRow } from "@/lib/db/community/types";
 
@@ -13,6 +14,7 @@ const TERMINAL_STATUSES = new Set([
 ]);
 
 export interface EscalateBody {
+  report_id?: string;
   title?: string;
   public_summary?: string;
   campus_area?: string;
@@ -26,11 +28,11 @@ export interface EscalateResult {
   created: boolean;
 }
 
-export function escalateToHelperRequest(
+export async function escalateToHelperRequest(
   caseId: string,
   userId: string,
   body: EscalateBody
-): EscalateResult {
+): Promise<EscalateResult> {
   const existing = helperRequestRepository.findByCase(caseId);
   if (existing) {
     return { helper_request: existing, created: false };
@@ -39,41 +41,32 @@ export function escalateToHelperRequest(
   const caseRow = store.cases.get(caseId);
   if (!caseRow) throw new Error(`case ${caseId} not found`);
 
-  // Find the latest run for this case
-  let latestRun: { id: string; created_at: string } | null = null;
-  for (const run of store.case_runs.values()) {
-    if (run.case_id === caseId) {
-      if (!latestRun || run.created_at > latestRun.created_at) {
-        latestRun = run;
-      }
-    }
+  const report = await getLatestCaseReportOrThrow(caseId);
+  if (report.userId !== userId || report.caseId !== caseId) {
+    throw Object.assign(new Error("report does not belong to this case"), { status: 403 });
+  }
+  if (!body.report_id || body.report_id !== report.id) {
+    throw Object.assign(new Error("report_id is required and must match the completed report"), { status: 422 });
   }
 
-  const runId = latestRun?.id ?? null;
-  const { diagnosisSnapshot, verdictSnapshot, actionPlanSnapshot } =
-    buildContextSnapshot(caseId, runId);
-
-  const helperTemplate =
-    typeof actionPlanSnapshot.helper_request_template === "string"
-      ? actionPlanSnapshot.helper_request_template
-      : null;
-
-  const safetyFlags = Array.isArray(diagnosisSnapshot.safety_flags)
-    ? (diagnosisSnapshot.safety_flags as string[])
-    : [];
+  const runId = report.runId;
+  const { diagnosisSnapshot, verdictSnapshot, actionPlanSnapshot } = buildContextSnapshot(caseId, runId);
+  const helperTemplate = report.boardSummaryJson.helperRequestTemplate;
+  const safetyFlags = report.boardSummaryJson.safetyFlags;
 
   const created = helperRequestRepository.create({
     case_id: caseId,
     run_id: runId,
+    report_id: report.id,
     user_id: userId,
-    title: body.title ?? caseRow.title,
-    public_summary: body.public_summary ?? helperTemplate ?? caseRow.title,
+    title: body.title ?? report.boardSummaryJson.title ?? caseRow.title,
+    public_summary: body.public_summary ?? report.boardSummaryJson.publicSummary,
     helper_request_template: helperTemplate,
-    category: caseRow.category,
-    urgency: caseRow.urgency,
+    category: report.boardSummaryJson.category,
+    urgency: report.boardSummaryJson.urgency,
     campus_area: body.campus_area ?? null,
     preferred_time: body.preferred_time ?? null,
-    skill_tags: body.skill_tags ?? [],
+    skill_tags: body.skill_tags ?? report.boardSummaryJson.skillTags,
     safety_flags: safetyFlags,
     diagnosis_snapshot: diagnosisSnapshot as Record<string, unknown>,
     verdict_snapshot: verdictSnapshot as Record<string, unknown>,

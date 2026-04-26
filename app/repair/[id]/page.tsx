@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useCaseRun } from "@/hooks/useCaseRun";
 import { useFollowUp } from "@/hooks/useFollowUp";
 import { startRun } from "@/lib/api/client";
@@ -118,6 +118,8 @@ export default function RepairWorkspacePage() {
   const { snapshot, events, isLoading, error: caseRunError } = useCaseRun(id);
   const runId = snapshot?.currentRun?.id ?? "";
   const followUp = useFollowUp(id, runId);
+  const [publishStatus, setPublishStatus] = useState<"idle" | "publishing" | "published" | "error">("idle");
+  const [publishError, setPublishError] = useState("");
 
   // Auto-trigger a run when the case is open with no active run yet
   const hasStartedRef = useRef(false);
@@ -179,6 +181,33 @@ export default function RepairWorkspacePage() {
   const statusLabel = runStatus
     ? (RUN_STATUS_LABELS[runStatus] ?? "Processing")
     : (CASE_STATUS_LABELS[snapshot?.case.status ?? "open"] ?? "Not Started");
+  const primaryMedia = snapshot?.report?.reportJson.media.find((item) => item.mediaType === "image");
+
+  async function publishToCommunity() {
+    if (!snapshot?.report) return;
+    setPublishStatus("publishing");
+    setPublishError("");
+    try {
+      const res = await fetch(`/api/cases/${id}/helper-request`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          report_id: snapshot.report.id,
+          title: snapshot.report.boardSummaryJson.title,
+          public_summary: snapshot.report.boardSummaryJson.publicSummary,
+          skill_tags: snapshot.report.boardSummaryJson.skillTags,
+        }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(typeof body.error === "string" ? body.error : "Could not publish to community");
+      }
+      setPublishStatus("published");
+    } catch (err) {
+      setPublishStatus("error");
+      setPublishError(err instanceof Error ? err.message : "Could not publish to community");
+    }
+  }
 
   return (
     <div className="min-h-screen bg-[#f9faf2] flex flex-col">
@@ -203,7 +232,7 @@ export default function RepairWorkspacePage() {
         {/* Case Summary */}
         <div className="bg-white border border-[#e2e3db] rounded-xl p-5 flex items-center gap-6 shadow-[0px_4px_10px_rgba(27,67,50,0.04)]">
           <div className="w-32 h-32 border border-[#e2e3db] rounded-lg overflow-hidden shrink-0">
-            <img src={macbookImg} alt={caseTitle} className="w-full h-full object-cover" />
+            <img src={primaryMedia?.url ?? macbookImg} alt={caseTitle} className="w-full h-full object-cover" />
           </div>
           <div className="flex flex-col justify-center gap-2">
             <h2 className="font-semibold text-[#1a1c18] text-base">{caseTitle}</h2>
@@ -348,6 +377,11 @@ export default function RepairWorkspacePage() {
               <h3 className="font-semibold text-[#1a1c18] text-base px-2">Final Recommendation</h3>
               {isComplete && snapshot?.verdict ? (
                 <div className="bg-white border border-[#e2e3db] rounded-xl p-6 flex flex-col gap-5 shadow-[0px_4px_10px_rgba(27,67,50,0.04)]">
+                  {snapshot.report ? (
+                    <div className="bg-[#f3f4ec] rounded-lg px-4 py-3 text-sm text-[#414844]">
+                      Canonical report saved as #{snapshot.report.id.slice(0, 8).toUpperCase()}.
+                    </div>
+                  ) : null}
                   {snapshot.actionPlan?.safetyPreamble && (
                     <div className="bg-[#fff8e7] border border-[#ffdcbd] rounded-lg px-4 py-3 flex gap-2 items-start">
                       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0 mt-0.5"><path d="M8 1.5L1 14.5h14L8 1.5z" stroke="#623f18" strokeWidth="1.4" strokeLinejoin="round"/><path d="M8 6v4M8 11.5h.01" stroke="#623f18" strokeWidth="1.4" strokeLinecap="round"/></svg>
@@ -382,6 +416,27 @@ export default function RepairWorkspacePage() {
                   <div className="bg-[#f3f4ec] rounded-lg px-4 py-3 text-sm text-[#414844] leading-5">
                     <span className="font-medium text-[#1a1c18]">Note: </span>{snapshot.verdict.uncertaintyNote}
                   </div>
+                  {snapshot.report ? (
+                    <div className="border-t border-[#e2e3db] pt-4 flex flex-col gap-3">
+                      <div>
+                        <p className="text-[#1a1c18] text-sm font-semibold">Publish to Community</p>
+                        <p className="text-[#717973] text-sm mt-1">
+                          Share only the board-safe summary so campus helpers can offer repair support.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={publishToCommunity}
+                        disabled={publishStatus === "publishing" || publishStatus === "published"}
+                        className="w-fit bg-[#1b4332] text-white text-sm font-semibold px-5 py-3 rounded-lg hover:bg-[#012d1d] transition-colors disabled:opacity-60"
+                      >
+                        {publishStatus === "published" ? "Published" : publishStatus === "publishing" ? "Publishing..." : "Publish to Community"}
+                      </button>
+                      {publishStatus === "error" ? (
+                        <p className="text-[#991b1b] text-sm">{publishError}</p>
+                      ) : null}
+                    </div>
+                  ) : null}
                 </div>
               ) : (
                 <div className="bg-[rgba(249,250,242,0.5)] border-2 border-dashed border-[#c1c8c2] rounded-xl p-8 flex flex-col items-center justify-center min-h-[200px] gap-3">

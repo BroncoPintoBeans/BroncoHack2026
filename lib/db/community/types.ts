@@ -80,6 +80,7 @@ export interface HelperRequestRow {
   id: string;
   case_id: string;
   run_id: string | null;
+  report_id: string | null;
   user_id: string;
   title: string;
   public_summary: string;

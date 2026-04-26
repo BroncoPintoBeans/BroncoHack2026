@@ -92,6 +92,7 @@ export const fixtureHelperRequestOpen: HelperRequestDetail = {
   id: HELPER_REQUEST_ID,
   case_id: CASE_ID,
   run_id: RUN_ID,
+  report_id: null,
   user_id: OWNER_USER_ID,
   title: "Need help replacing MacBook Pro display cable (Flexgate)",
   public_summary:

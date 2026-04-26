@@ -8,6 +8,7 @@ import { getRun, updateRun } from '@/lib/db/queries/runs'
 import { runOrchestrator } from '@/lib/agents/orchestrator'
 import { writeDiagnosis, writeVerdict, writeActionPlan, writeHelperRequest } from '@/lib/db/queries/outputs'
 import { insertEvent } from '@/lib/db/queries/events'
+import { materializeCaseReport } from '@/lib/db/queries/reports'
 
 const FollowupBodySchema = z.object({
   answer: z.string().trim().min(1).max(200),
@@ -87,6 +88,7 @@ export async function POST(
       writeVerdict,
       writeActionPlan,
       writeHelperRequest,
+      materializeReport: materializeCaseReport,
       insertEvent,
     })
 

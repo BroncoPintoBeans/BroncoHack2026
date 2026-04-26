@@ -12,6 +12,7 @@ import type { User } from "@supabase/supabase-js";
 
 const navLinks = [
   { href: "/marketplace", label: "Marketplace" },
+  { href: "/messages", label: "Chats" },
   { href: "/repair/case-84920", label: "Repair Guide" },
   { href: "/rewards", label: "Impact" },
 ];
