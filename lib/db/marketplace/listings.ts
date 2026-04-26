@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { getUserDisplayNames } from "./seller-profiles";
 
 export type MarketplaceListingType = "sale" | "trade" | "free" | "repair";
 
@@ -14,6 +15,7 @@ export interface MarketplaceMedia {
 export interface MarketplaceListing {
   id: string;
   sellerId: string;
+  sellerName: string | null;
   category: string;
   title: string;
   description: string;
@@ -123,6 +125,7 @@ function rowToMarketplaceListing(
   return {
     id: row.id,
     sellerId: row.seller_id,
+    sellerName: null,
     category: row.category,
     title: row.title,
     description: row.description ?? "",
@@ -137,6 +140,13 @@ function rowToMarketplaceListing(
     media,
     imageUrl: media.find((item) => item.mediaType === "image" && item.url)?.url ?? null,
   };
+}
+
+function withSellerNames(listings: MarketplaceListing[], sellerNames: Map<string, string>) {
+  return listings.map((listing) => ({
+    ...listing,
+    sellerName: sellerNames.get(listing.sellerId) ?? null,
+  }));
 }
 
 function matchesSearch(listing: MarketplaceListing, q: string) {
@@ -181,8 +191,11 @@ export async function listMarketplaceListings(filters: MarketplaceListingFilters
   const listings = ((data ?? []) as MarketplaceListingRow[]).map((row) =>
     rowToMarketplaceListing(supabase, row)
   );
+  const sellerIds = [...new Set(listings.map((listing) => listing.sellerId))];
+  const sellerNames = await getUserDisplayNames(sellerIds, supabase);
+  const listingsWithSellers = withSellerNames(listings, sellerNames);
 
-  return filters.q ? listings.filter((listing) => matchesSearch(listing, filters.q!)) : listings;
+  return filters.q ? listingsWithSellers.filter((listing) => matchesSearch(listing, filters.q!)) : listingsWithSellers;
 }
 
 export async function getMarketplaceListingById(id: string) {
@@ -196,5 +209,11 @@ export async function getMarketplaceListingById(id: string) {
   if (error) throw new Error(error.message);
   if (!data) return null;
 
-  return rowToMarketplaceListing(supabase, data as MarketplaceListingRow);
+  const listing = rowToMarketplaceListing(supabase, data as MarketplaceListingRow);
+  const sellerNames = await getUserDisplayNames([listing.sellerId], supabase);
+
+  return {
+    ...listing,
+    sellerName: sellerNames.get(listing.sellerId) ?? null,
+  };
 }

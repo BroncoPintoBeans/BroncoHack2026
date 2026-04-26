@@ -66,6 +66,7 @@ function rowToSummary(row: ConversationRow): ConversationSummary {
   return {
     id: row.id,
     case_id: row.case_id,
+    listing_id: row.listing_id ?? null,
     helper_request_id: row.helper_request_id,
     helper_request_offer_id: row.helper_request_offer_id,
     conversation_type: row.conversation_type,

@@ -116,6 +116,7 @@ export interface HelperRequestOfferRow {
 export interface ConversationRow {
   id: string;
   case_id: string | null;
+  listing_id?: string | null;
   helper_request_id: string | null;
   helper_request_offer_id: string | null;
   conversation_type: "case_helper" | "listing";

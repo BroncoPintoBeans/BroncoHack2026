@@ -214,7 +214,7 @@ export default function MarketplaceGridClient({ initialItems }: MarketplaceGridC
     <div className="min-h-screen bg-[#f9faf2]">
       <Navbar />
       <main className="max-w-[1280px] mx-auto px-6 py-12 flex flex-col gap-8">
-        <BackButton fallbackHref="/home" label="Back to Home" />
+        <BackButton fallbackHref="/" label="Back to Home" alwaysNavigate />
         <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="font-bold text-[#012d1d] text-[32px] tracking-[-0.64px] leading-tight">
