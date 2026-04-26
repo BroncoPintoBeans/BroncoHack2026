@@ -14,6 +14,7 @@ const navLinks = [
   { href: "/marketplace", label: "Marketplace" },
   { href: "/messages", label: "Chats" },
   { href: "/repair/new", label: "Repair Guide" },
+  { href: "/support", label: "Support" },
   { href: "/rewards", label: "Impact" },
 ];
 
