@@ -6,16 +6,23 @@ interface BackButtonProps {
   fallbackHref?: string;
   label?: string;
   className?: string;
+  alwaysUseFallback?: boolean;
 }
 
 export default function BackButton({
   fallbackHref = "/home",
   label = "Back",
   className = "",
+  alwaysUseFallback = false,
 }: BackButtonProps) {
   const router = useRouter();
 
   function goBack() {
+    if (alwaysUseFallback) {
+      router.push(fallbackHref);
+      return;
+    }
+
     if (window.history.length > 1) {
       router.back();
       return;

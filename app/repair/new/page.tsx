@@ -20,11 +20,11 @@ function fileToDataUrl(file: File): Promise<string> {
   })
 }
 
-const CATEGORIES: { value: CaseCategory; label: string; emoji: string }[] = [
-  { value: 'laptop', label: 'Laptop', emoji: '💻' },
-  { value: 'bicycle', label: 'Bicycle', emoji: '🚲' },
-  { value: 'scooter', label: 'Scooter', emoji: '🛴' },
-  { value: 'mini_fridge', label: 'Mini Fridge', emoji: '🧊' },
+const CATEGORIES: { value: CaseCategory; label: string; icon: string; hint: string }[] = [
+  { value: 'electronics', label: 'Electronics', icon: 'E', hint: 'Devices, small appliances' },
+  { value: 'clothing', label: 'Clothing', icon: 'C', hint: 'Tears, zippers, fabric' },
+  { value: 'furniture', label: 'Furniture', icon: 'F', hint: 'Chairs, desks, shelves' },
+  { value: 'misc', label: 'Misc', icon: 'M', hint: 'Anything else' },
 ]
 
 const URGENCIES: { value: Urgency; label: string; desc: string }[] = [
@@ -35,7 +35,7 @@ const URGENCIES: { value: Urgency; label: string; desc: string }[] = [
 
 export default function NewRepairPage() {
   const router = useRouter()
-  const [category, setCategory] = useState<CaseCategory>('laptop')
+  const [category, setCategory] = useState<CaseCategory>('electronics')
   const [symptoms, setSymptoms] = useState('')
   const [urgency, setUrgency] = useState<Urgency>('normal')
   const [modelNumber, setModelNumber] = useState('')
@@ -150,22 +150,27 @@ export default function NewRepairPage() {
           {/* Category */}
           <div className="flex flex-col gap-3">
             <label className="font-semibold text-[#1a1c18] text-sm tracking-[0.4px] uppercase">Item Category</label>
-            <div className="grid grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {CATEGORIES.map((cat) => (
                 <button
                   key={cat.value}
                   type="button"
                   onClick={() => setCategory(cat.value)}
-                  className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
+                  className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all min-h-[132px] ${
                     category === cat.value
                       ? 'border-[#1b4332] bg-[#1b4332]/5'
                       : 'border-[#e2e3db] bg-white hover:border-[#1b4332]/40'
                   }`}
                 >
-                  <span className="text-3xl">{cat.emoji}</span>
+                  <span className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${
+                    category === cat.value ? 'bg-[#1b4332] text-white' : 'bg-[#e2e3db] text-[#1b4332]'
+                  }`}>
+                    {cat.icon}
+                  </span>
                   <span className={`text-xs font-semibold tracking-[0.4px] ${category === cat.value ? 'text-[#1b4332]' : 'text-[#414844]'}`}>
                     {cat.label}
                   </span>
+                  <span className="text-[11px] text-[#717973] leading-4 text-center">{cat.hint}</span>
                 </button>
               ))}
             </div>

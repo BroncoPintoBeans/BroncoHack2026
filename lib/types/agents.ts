@@ -1,4 +1,4 @@
-export type CaseCategory = 'laptop' | 'bicycle' | 'scooter' | 'mini_fridge'
+export type CaseCategory = 'electronics' | 'clothing' | 'furniture' | 'misc' | 'laptop' | 'bicycle' | 'scooter' | 'mini_fridge'
 export type AgentPhase = 'intake' | 'diagnosis' | 'economics' | 'action_plan' | 'helper_routing' | 'orchestrator'
 export type PhaseStatus = 'started' | 'running' | 'complete' | 'failed' | 'awaiting_user'
 export type ModelTier = 'flash' | 'pro'

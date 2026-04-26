@@ -56,12 +56,6 @@ export default function Navbar() {
           </nav>
         </div>
         <div className="flex items-center gap-4">
-          <Link
-            href="/repair/case-84920"
-            className="bg-[#1b4332] text-white text-xs font-semibold font-['Work_Sans',sans-serif] tracking-[0.6px] px-4 py-2 rounded-lg hover:bg-[#012d1d] transition-colors"
-          >
-            Start Repair
-          </Link>
           {user ? (
             <div className="flex items-center gap-3">
               <Link
