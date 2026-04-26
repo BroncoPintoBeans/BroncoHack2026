@@ -56,7 +56,7 @@ export async function getUserDisplayNames(
     return names;
   }
 
-  const admin = getSupabaseClient();
+  const admin = await getSupabaseClient();
 
   try {
     missingIds = await fillFromProfiles(

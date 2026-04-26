@@ -135,7 +135,7 @@ async function getUserRatingsForSeller(sellerId: string) {
 
   if (!isSupabaseAvailable()) return [];
 
-  const admin = getSupabaseClient();
+  const admin = await getSupabaseClient();
   const { data: adminData, error: adminError } = await admin
     .from("user_ratings")
     .select(
@@ -161,7 +161,7 @@ async function getReviewerNames(reviewerIds: string[]) {
 
   let rows = (data ?? []) as UserProfileRow[];
   if (error && isSupabaseAvailable()) {
-    const admin = getSupabaseClient();
+    const admin = await getSupabaseClient();
     const { data: adminData, error: adminError } = await admin
       .from("user_profiles")
       .select("id, display_name")
@@ -192,7 +192,7 @@ async function hasSellerInteraction(viewerId: string, sellerId: string) {
   if (error) {
     if (!isSupabaseAvailable()) throw new Error(error.message);
 
-    const admin = getSupabaseClient();
+    const admin = await getSupabaseClient();
     const { data: adminData, error: adminError } = await admin
       .from("messages")
       .select("sender_id,receiver_id")
@@ -337,7 +337,7 @@ export async function createSellerReview(input: {
     throw error;
   }
 
-  const admin = getSupabaseClient();
+  const admin = await getSupabaseClient();
   const { data, error } = await admin
     .from("user_ratings")
     .insert({

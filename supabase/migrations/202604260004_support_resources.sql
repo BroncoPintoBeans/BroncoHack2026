@@ -186,4 +186,3 @@ on conflict (org_key) do update set
   source_urls = excluded.source_urls,
   last_verified_at = excluded.last_verified_at,
   updated_at = now();
-

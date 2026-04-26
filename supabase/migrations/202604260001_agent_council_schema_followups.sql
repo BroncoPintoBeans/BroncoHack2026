@@ -23,7 +23,60 @@ create index if not exists helper_routing_results_case_idx
 create index if not exists helper_routing_results_owner_idx
   on public.helper_routing_results(user_id, updated_at desc);
 
--- 3. Current read model includes diagnosis questions and helper-routing output.
+-- 3. Canonical private Agent Verdict report. This is the only saved source of
+-- truth for completed verdict artifacts; helper_requests only caches board-safe
+-- fields for community discovery.
+create table if not exists public.case_reports (
+  id uuid primary key default gen_random_uuid(),
+  case_id uuid not null references public.cases(id) on delete cascade,
+  run_id uuid not null references public.case_runs(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  report_version integer not null default 1,
+  report_json jsonb not null,
+  board_summary_json jsonb not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique(run_id),
+  constraint case_reports_report_json_object
+    check (jsonb_typeof(report_json) = 'object'),
+  constraint case_reports_board_summary_json_object
+    check (jsonb_typeof(board_summary_json) = 'object')
+);
+
+create index if not exists case_reports_case_created_idx
+  on public.case_reports(case_id, created_at desc);
+create index if not exists case_reports_owner_created_idx
+  on public.case_reports(user_id, created_at desc);
+
+create or replace function public.case_reports_match_run_owner()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not exists (
+    select 1
+    from public.case_runs r
+    where r.id = new.run_id
+      and r.case_id = new.case_id
+      and r.user_id = new.user_id
+  ) then
+    raise exception 'case_reports run_id, case_id, and user_id must match case_runs';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists case_reports_match_run_owner_trigger on public.case_reports;
+create trigger case_reports_match_run_owner_trigger
+  before insert or update of run_id, case_id, user_id
+  on public.case_reports
+  for each row
+  execute function public.case_reports_match_run_owner();
+
+-- 4. Current read model includes diagnosis questions, helper-routing output,
+-- and the canonical report for owner-scoped workspace reads.
 create or replace view public.current_case_outputs as
   select
     c.id as case_id,
@@ -44,15 +97,18 @@ create or replace view public.current_case_outputs as
     a.steps,
     a.technician_questions as action_plan_technician_questions,
     a.safety_preamble,
-    h.matches as helper_matches
+    h.matches as helper_matches,
+    cr.report_json,
+    cr.board_summary_json
   from public.cases c
   join public.case_runs r on r.case_id = c.id and r.is_current
   left join public.diagnoses d on d.run_id = r.id
   left join public.verdicts v on v.run_id = r.id
   left join public.action_plans a on a.run_id = r.id
-  left join public.helper_routing_results h on h.run_id = r.id;
+  left join public.helper_routing_results h on h.run_id = r.id
+  left join public.case_reports cr on cr.run_id = r.id;
 
--- 4. Owner-scoped RLS for direct client Supabase reads/writes.
+-- 5. Owner-scoped RLS for direct client Supabase reads/writes.
 alter table public.cases enable row level security;
 alter table public.case_media enable row level security;
 alter table public.case_runs enable row level security;
@@ -61,6 +117,7 @@ alter table public.diagnoses enable row level security;
 alter table public.verdicts enable row level security;
 alter table public.action_plans enable row level security;
 alter table public.helper_routing_results enable row level security;
+alter table public.case_reports enable row level security;
 
 drop policy if exists "cases owner select" on public.cases;
 drop policy if exists "cases owner insert" on public.cases;
@@ -142,8 +199,107 @@ create policy "helper_routing_results owner insert" on public.helper_routing_res
 create policy "helper_routing_results owner update" on public.helper_routing_results
   for update using (user_id = auth.uid()) with check (user_id = auth.uid());
 
--- 5. Community repair board RLS. helper_requests is public-to-auth for board
+drop policy if exists "case_reports owner select" on public.case_reports;
+drop policy if exists "case_reports owner insert" on public.case_reports;
+drop policy if exists "case_reports owner update" on public.case_reports;
+create policy "case_reports owner select" on public.case_reports
+  for select to authenticated using (user_id = (select auth.uid()));
+create policy "case_reports owner insert" on public.case_reports
+  for insert to authenticated with check (user_id = (select auth.uid()));
+create policy "case_reports owner update" on public.case_reports
+  for update to authenticated using (user_id = (select auth.uid())) with check (user_id = (select auth.uid()));
+
+-- 6. Community repair board RLS. helper_requests is public-to-auth for board
 -- discovery, while writes stay with the owning case user.
+alter table public.helper_requests
+  add column if not exists report_id uuid references public.case_reports(id) on delete set null,
+  add column if not exists title text,
+  add column if not exists public_summary text,
+  add column if not exists helper_request_template text,
+  add column if not exists category text,
+  add column if not exists urgency text not null default 'normal',
+  add column if not exists skill_tags jsonb not null default '[]'::jsonb,
+  add column if not exists safety_flags jsonb not null default '[]'::jsonb,
+  add column if not exists verdict_label text,
+  add column if not exists rrr_score numeric,
+  add column if not exists updated_at timestamptz not null default now();
+
+do $$
+begin
+  alter table public.helper_requests
+    drop constraint if exists helper_requests_status_check;
+end $$;
+
+alter table public.helper_requests
+  add constraint helper_requests_status_check
+  check (status in (
+    'draft',
+    'open',
+    'helper_offered',
+    'helper_accepted',
+    'in_progress',
+    'resolved',
+    'cancelled',
+    'expired',
+    'no_helper_found'
+  ));
+
+create index if not exists helper_requests_report_idx
+  on public.helper_requests(report_id);
+
+do $$
+begin
+  if to_regclass('public.helper_request_offers') is not null then
+    execute $view$
+      create or replace view public.community_helper_request_cards as
+      select
+        hr.id,
+        hr.case_id,
+        hr.report_id,
+        hr.title,
+        hr.public_summary,
+        hr.category,
+        hr.urgency,
+        hr.campus_area,
+        hr.preferred_time,
+        hr.skill_tags,
+        hr.safety_flags,
+        hr.status,
+        hr.verdict_label,
+        hr.rrr_score,
+        count(hro.id) filter (where hro.status = 'pending') as pending_offer_count,
+        hr.created_at,
+        hr.updated_at
+      from public.helper_requests hr
+      left join public.helper_request_offers hro on hro.helper_request_id = hr.id
+      group by hr.id
+    $view$;
+  else
+    execute $view$
+      create or replace view public.community_helper_request_cards as
+      select
+        hr.id,
+        hr.case_id,
+        hr.report_id,
+        hr.title,
+        hr.public_summary,
+        hr.category,
+        hr.urgency,
+        hr.campus_area,
+        hr.preferred_time,
+        hr.skill_tags,
+        hr.safety_flags,
+        hr.status,
+        hr.verdict_label,
+        hr.rrr_score,
+        0::bigint as pending_offer_count,
+        hr.created_at,
+        hr.updated_at
+      from public.helper_requests hr
+    $view$;
+  end if;
+end $$;
+
 alter table public.helper_requests enable row level security;
 
 drop policy if exists "helper_requests authenticated select" on public.helper_requests;
@@ -209,7 +365,51 @@ begin
   end if;
 end $$;
 
--- 6. Direct Supabase Realtime subscription support for case_events.
+-- 7. Private repair media bucket. New repair uploads use case-media; the older
+-- empty cases-media bucket is intentionally left alone for a later cleanup.
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'case-media',
+  'case-media',
+  false,
+  8388608,
+  array['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'video/mp4', 'video/webm', 'video/quicktime']
+)
+on conflict (id) do update
+set public = false,
+    file_size_limit = excluded.file_size_limit,
+    allowed_mime_types = excluded.allowed_mime_types;
+
+drop policy if exists "case-media owner upload" on storage.objects;
+drop policy if exists "case-media owner read" on storage.objects;
+
+create policy "case-media owner upload" on storage.objects
+  for insert to authenticated
+  with check (
+    bucket_id = 'case-media'
+    and (storage.foldername(name))[1] = (select auth.uid())::text
+    and exists (
+      select 1
+      from public.cases c
+      where c.id::text = (storage.foldername(name))[2]
+        and c.user_id = (select auth.uid())
+    )
+  );
+
+create policy "case-media owner read" on storage.objects
+  for select to authenticated
+  using (
+    bucket_id = 'case-media'
+    and (storage.foldername(name))[1] = (select auth.uid())::text
+    and exists (
+      select 1
+      from public.cases c
+      where c.id::text = (storage.foldername(name))[2]
+        and c.user_id = (select auth.uid())
+    )
+  );
+
+-- 8. Direct Supabase Realtime subscription support for case_events.
 do $$
 begin
   if not exists (

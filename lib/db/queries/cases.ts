@@ -5,9 +5,14 @@ import type { CaseCategory, Urgency } from '../../types/agents'
 import {
   assertNoSupabaseError,
   CaseRowSchema,
+  isUuid,
   parseDbRow,
   parseDbRows,
 } from './validation'
+
+const SUPPORTED_CASE_CATEGORIES = ['laptop', 'bicycle', 'scooter', 'mini_fridge']
+const SUPPORTED_URGENCIES = ['low', 'normal', 'urgent']
+const SUPPORTED_CASE_STATUSES = ['draft', 'open', 'running', 'awaiting_user', 'complete', 'failed']
 
 function dbRowToCaseRecord(row: unknown): CaseRecord {
   const parsed = parseDbRow(CaseRowSchema, row, 'cases row')
@@ -25,6 +30,14 @@ function dbRowToCaseRecord(row: unknown): CaseRecord {
   }
 }
 
+function tryDbRowToCaseRecord(row: unknown): CaseRecord | null {
+  try {
+    return dbRowToCaseRecord(row)
+  } catch {
+    return null
+  }
+}
+
 export async function createCase(data: {
   userId: string
   category: CaseCategory
@@ -37,7 +50,7 @@ export async function createCase(data: {
   const now = new Date().toISOString()
 
   if (isSupabaseAvailable()) {
-    const { data: row, error } = await getSupabaseClient()
+    const { data: row, error } = await (await getSupabaseClient())
       .from('cases')
       .insert({
         id,
@@ -74,19 +87,24 @@ export async function createCase(data: {
 
 export async function getCase(id: string): Promise<CaseRecord | null> {
   if (isSupabaseAvailable()) {
-    const { data: row, error } = await getSupabaseClient().from('cases').select().eq('id', id).maybeSingle()
+    if (!isUuid(id)) return null
+
+    const { data: row, error } = await (await getSupabaseClient()).from('cases').select().eq('id', id).maybeSingle()
     assertNoSupabaseError(error, 'getCase select')
-    return row ? dbRowToCaseRecord(row) : null
+    return row ? tryDbRowToCaseRecord(row) : null
   }
   return demoStore.cases.get(id) ?? null
 }
 
 export async function listCases(userId: string): Promise<CaseRecord[]> {
   if (isSupabaseAvailable()) {
-    const { data: rows, error } = await getSupabaseClient()
+    const { data: rows, error } = await (await getSupabaseClient())
       .from('cases')
       .select()
       .eq('user_id', userId)
+      .in('category', SUPPORTED_CASE_CATEGORIES)
+      .in('urgency', SUPPORTED_URGENCIES)
+      .in('status', SUPPORTED_CASE_STATUSES)
       .order('created_at', { ascending: false })
     assertNoSupabaseError(error, 'listCases select')
     return parseDbRows(CaseRowSchema, rows ?? [], 'listCases').map(dbRowToCaseRecord)
@@ -105,7 +123,7 @@ export async function updateCase(
     if (data.modelNumber !== undefined) patch.model_number = data.modelNumber
     if (data.quoteCents !== undefined) patch.quoted_price_cents = data.quoteCents
     if (data.status !== undefined) patch.status = data.status === 'open' ? 'draft' : data.status
-    const { data: row, error } = await getSupabaseClient()
+    const { data: row, error } = await (await getSupabaseClient())
       .from('cases')
       .update(patch)
       .eq('id', id)

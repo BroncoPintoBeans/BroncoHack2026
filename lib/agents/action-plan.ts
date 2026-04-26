@@ -15,7 +15,7 @@ export async function runActionPlan(
 
   const client = buildClient('flash')
   if (!client) {
-    rawPayload = await mockActionPlan(ctx, diagnosisPayload)
+    rawPayload = await mockActionPlan(ctx, caseRecord, diagnosisPayload)
   } else {
     await ctx.emitEvent('action_plan', 'started')
 
@@ -24,7 +24,11 @@ export async function runActionPlan(
     const prompt = `You are a repair action planner. Create step-by-step repair instructions.
 
 Device: ${caseRecord.category}
+User symptoms: ${caseRecord.symptoms}
+Model number: ${caseRecord.modelNumber ?? 'unknown'}
+User urgency: ${caseRecord.urgency}
 Root cause: ${diagnosisPayload.rootCause}
+Safety flags: ${diagnosisPayload.safetyFlags.join(', ') || 'none'}
 Technician questions: ${diagnosisPayload.technicianQuestions.join(', ')}
 
 Return JSON:

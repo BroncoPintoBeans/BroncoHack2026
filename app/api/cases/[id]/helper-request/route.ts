@@ -1,10 +1,42 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUserId } from "@/lib/auth/current-user";
+import { getRequestUserId } from "@/lib/auth/demo-user";
 import { createHelperRequestSchema } from "@/lib/schemas/community/helper-requests";
 import {
   escalateToHelperRequest,
+  getActiveHelperRequestForCase,
 } from "@/lib/services/community/helper-request-service";
-import { store } from "@/lib/db/community/store";
+import { getCase } from "@/lib/db/queries/cases";
+
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id: caseId } = await params;
+    const userId = await getRequestUserId(req);
+    if (!userId) {
+      return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+    }
+
+    const caseRow = await getCase(caseId);
+    if (!caseRow) {
+      return NextResponse.json({ error: "case not found" }, { status: 404 });
+    }
+    if (caseRow.userId !== userId) {
+      return NextResponse.json({ error: "forbidden" }, { status: 403 });
+    }
+
+    const result = await getActiveHelperRequestForCase(caseId, userId);
+    return NextResponse.json(result);
+  } catch (err) {
+    const e = err as { status?: number; message?: string };
+    const status = e.status ?? 500;
+    return NextResponse.json(
+      { error: e.message ?? "internal server error" },
+      { status }
+    );
+  }
+}
 
 export async function POST(
   req: NextRequest,
@@ -12,13 +44,16 @@ export async function POST(
 ) {
   try {
     const { id: caseId } = await params;
-    const userId = getCurrentUserId(req);
+    const userId = await getRequestUserId(req);
+    if (!userId) {
+      return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+    }
 
-    const caseRow = store.cases.get(caseId);
+    const caseRow = await getCase(caseId);
     if (!caseRow) {
       return NextResponse.json({ error: "case not found" }, { status: 404 });
     }
-    if (caseRow.user_id !== userId) {
+    if (caseRow.userId !== userId) {
       return NextResponse.json({ error: "forbidden" }, { status: 403 });
     }
 

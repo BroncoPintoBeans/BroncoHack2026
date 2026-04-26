@@ -1,5 +1,5 @@
 import type { CaseCategory, AgentPhase, PhaseStatus, Urgency } from './agents'
-import type { DiagnosisCompletePayload, EconomicsPayload, ActionPlanPayload, HelperMatch, HelperRoutingPayload } from './payloads'
+import type { DiagnosisCompletePayload, EconomicsPayload, ActionPlanPayload, HelperMatch } from './payloads'
 
 export interface CaseRecord {
   id: string
@@ -18,6 +18,7 @@ export interface CaseMediaRecord {
   id: string
   caseId: string
   url: string
+  storagePath?: string
   mediaType: 'image' | 'video'
   createdAt: string
 }
@@ -48,30 +49,40 @@ export interface CaseEventRecord {
   createdAt: string
 }
 
+export interface CaseReportBoardSummary {
+  title: string
+  publicSummary: string
+  helperRequestTemplate: string
+  category: CaseCategory
+  urgency: Urgency
+  skillTags: string[]
+  safetyFlags: string[]
+  verdictLabel: string | null
+  rrrScore: number | null
+}
+
+export interface CaseReportJson {
+  version: 1
+  generatedAt: string
+  case: Pick<CaseRecord, 'id' | 'category' | 'symptoms' | 'urgency' | 'modelNumber' | 'quoteCents'>
+  run: Pick<CaseRunRecord, 'id' | 'status' | 'currentPhase' | 'followupCount' | 'startedAt' | 'completedAt'>
+  diagnosis: DiagnosisCompletePayload | null
+  verdict: EconomicsPayload | null
+  actionPlan: ActionPlanPayload | null
+  helperRouting: { matches: HelperMatch[] }
+  media: CaseMediaRecord[]
+  followUps: { question: string; options: string[]; createdAt: string }[]
+  imageAnnotations?: unknown[]
+}
+
 export interface CaseReportRecord {
   id: string
   caseId: string
   runId: string
   userId: string
-  reportJson: {
-    diagnosis: DiagnosisCompletePayload
-    verdict: EconomicsPayload
-    actionPlan: ActionPlanPayload
-    helperRouting: HelperRoutingPayload
-    media: CaseMediaRecord[]
-    followups: unknown[]
-  }
-  boardSummaryJson: {
-    title: string
-    publicSummary: string
-    helperRequestTemplate: string | null
-    category: string
-    urgency: string
-    skillTags: string[]
-    safetyFlags: string[]
-    verdictLabel: string | null
-    rrrScore: number | null
-  }
+  reportVersion: number
+  reportJson: CaseReportJson
+  boardSummaryJson: CaseReportBoardSummary
   createdAt: string
   updatedAt: string
 }
@@ -79,10 +90,11 @@ export interface CaseReportRecord {
 export interface CurrentCaseOutput {
   case: CaseRecord
   currentRun?: CaseRunRecord
+  media: CaseMediaRecord[]
+  report?: CaseReportRecord
   diagnosis?: DiagnosisCompletePayload
   verdict?: EconomicsPayload
   actionPlan?: ActionPlanPayload
   helperMatches?: HelperMatch[]
-  report?: CaseReportRecord
   events: CaseEventRecord[]
 }

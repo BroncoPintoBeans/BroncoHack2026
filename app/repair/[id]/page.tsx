@@ -1,10 +1,10 @@
 "use client";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useCaseRun } from "@/hooks/useCaseRun";
 import { useFollowUp } from "@/hooks/useFollowUp";
-import { startRun } from "@/lib/api/client";
+import { ApiError, getPublishedHelperRequest, publishHelperRequest, startRun } from "@/lib/api/client";
 import { BroncoAssistant } from "@/components/BroncoAssistant";
 import Navbar from "@/components/Navbar";
 import type { CaseEventRecord } from "@/lib/types/case";
@@ -185,8 +185,22 @@ function RepairWorkspaceContent({ id }: { id: string }) {
   const { snapshot, events, isLoading, error: caseRunError } = useCaseRun(id);
   const runId = snapshot?.currentRun?.id ?? "";
   const followUp = useFollowUp(id, runId);
-  const [publishStatus, setPublishStatus] = useState<"idle" | "publishing" | "published" | "error">("idle");
-  const [publishError, setPublishError] = useState("");
+  const report = snapshot?.report;
+  const reportVerdict = report?.reportJson.verdict ?? snapshot?.verdict;
+  const reportActionPlan = report?.reportJson.actionPlan ?? snapshot?.actionPlan;
+  const boardSummary = report?.boardSummaryJson;
+  const caseImageUrl = snapshot?.media.find((item) => item.mediaType === "image" && item.url)?.url ?? macbookImg;
+  const [publishTitle, setPublishTitle] = useState<string | null>(null);
+  const [publishSummary, setPublishSummary] = useState<string | null>(null);
+  const [publishCampusArea, setPublishCampusArea] = useState("");
+  const [publishPreferredTime, setPublishPreferredTime] = useState("");
+  const [publishSkillTags, setPublishSkillTags] = useState<string | null>(null);
+  const [publishState, setPublishState] = useState<"idle" | "submitting" | "published">("idle");
+  const [publishError, setPublishError] = useState<ApiError | null>(null);
+  const [publishedRequestId, setPublishedRequestId] = useState<string | null>(null);
+  const runStatus = snapshot?.currentRun?.status;
+  const isComplete = runStatus === "complete";
+  const isAwaitingUser = runStatus === "awaiting_user";
 
   // Auto-trigger a run when the case is open with no active run yet
   const hasStartedRef = useRef(false);
@@ -203,9 +217,54 @@ function RepairWorkspaceContent({ id }: { id: string }) {
     }
   }, [snapshot, id]);
 
-  const runStatus = snapshot?.currentRun?.status;
-  const isComplete = runStatus === "complete";
-  const isAwaitingUser = runStatus === "awaiting_user";
+  useEffect(() => {
+    if (!isComplete || !snapshot) return;
+    let cancelled = false;
+
+    getPublishedHelperRequest(snapshot.case.id)
+      .then((result) => {
+        if (cancelled || !result.helper_request) return;
+        setPublishedRequestId(result.helper_request.id);
+        setPublishState("published");
+      })
+      .catch(() => {
+        // Publishing is optional, so a read-back miss should not block the verdict page.
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isComplete, snapshot]);
+
+  async function handlePublish(e: FormEvent) {
+    e.preventDefault();
+    if (!report || !snapshot) return;
+    setPublishState("submitting");
+    setPublishError(null);
+    try {
+      const title = publishTitle ?? boardSummary?.title ?? "";
+      const publicSummary = publishSummary ?? boardSummary?.publicSummary ?? "";
+      const rawSkillTags = publishSkillTags ?? boardSummary?.skillTags.join(", ") ?? "";
+      const skillTags = rawSkillTags
+        .split(",")
+        .map((tag) => tag.trim())
+        .filter(Boolean)
+        .slice(0, 10);
+      const result = await publishHelperRequest(snapshot.case.id, {
+        report_id: report.id,
+        title: title.trim() || boardSummary?.title,
+        public_summary: publicSummary.trim() || boardSummary?.publicSummary,
+        campus_area: publishCampusArea.trim() || undefined,
+        preferred_time: publishPreferredTime.trim() || undefined,
+        skill_tags: skillTags.length ? skillTags : boardSummary?.skillTags,
+      });
+      setPublishedRequestId(result.helper_request.id);
+      setPublishState("published");
+    } catch (err) {
+      setPublishError(err instanceof ApiError ? err : new ApiError("Failed to publish helper request", 500));
+      setPublishState("idle");
+    }
+  }
 
   const intakeComplete = getPhaseStatus("intake", events) === "COMPLETE";
   const steps = [
@@ -251,33 +310,6 @@ function RepairWorkspaceContent({ id }: { id: string }) {
   const statusLabel = runStatus
     ? (RUN_STATUS_LABELS[runStatus] ?? "Processing")
     : (CASE_STATUS_LABELS[snapshot?.case.status ?? "open"] ?? "Not Started");
-  const primaryMedia = snapshot?.report?.reportJson.media.find((item) => item.mediaType === "image");
-
-  async function publishToCommunity() {
-    if (!snapshot?.report) return;
-    setPublishStatus("publishing");
-    setPublishError("");
-    try {
-      const res = await fetch(`/api/cases/${id}/helper-request`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          report_id: snapshot.report.id,
-          title: snapshot.report.boardSummaryJson.title,
-          public_summary: snapshot.report.boardSummaryJson.publicSummary,
-          skill_tags: snapshot.report.boardSummaryJson.skillTags,
-        }),
-      });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(typeof body.error === "string" ? body.error : "Could not publish to community");
-      }
-      setPublishStatus("published");
-    } catch (err) {
-      setPublishStatus("error");
-      setPublishError(err instanceof Error ? err.message : "Could not publish to community");
-    }
-  }
 
   return (
     <div className="min-h-screen bg-[#f9faf2] flex flex-col">
@@ -302,7 +334,7 @@ function RepairWorkspaceContent({ id }: { id: string }) {
         {/* Case Summary */}
         <div className="bg-white border border-[#e2e3db] rounded-xl p-5 flex items-center gap-6 shadow-[0px_4px_10px_rgba(27,67,50,0.04)]">
           <div className="w-32 h-32 border border-[#e2e3db] rounded-lg overflow-hidden shrink-0">
-            <img src={primaryMedia?.url ?? macbookImg} alt={caseTitle} className="w-full h-full object-cover" />
+            <img src={caseImageUrl} alt={caseTitle} className="w-full h-full object-cover" />
           </div>
           <div className="flex flex-col justify-center gap-2">
             <h2 className="font-semibold text-[#1a1c18] text-base">{caseTitle}</h2>
@@ -445,33 +477,33 @@ function RepairWorkspaceContent({ id }: { id: string }) {
             {/* Final Recommendation */}
             <div className="flex flex-col gap-4 pt-4">
               <h3 className="font-semibold text-[#1a1c18] text-base px-2">Final Recommendation</h3>
-              {isComplete && snapshot?.verdict ? (
+              {isComplete && reportVerdict ? (
                 <div className="bg-white border border-[#e2e3db] rounded-xl p-6 flex flex-col gap-5 shadow-[0px_4px_10px_rgba(27,67,50,0.04)]">
-                  {snapshot.report ? (
+                  {report ? (
                     <div className="bg-[#f3f4ec] rounded-lg px-4 py-3 text-sm text-[#414844]">
-                      Canonical report saved as #{snapshot.report.id.slice(0, 8).toUpperCase()}.
+                      Canonical report saved as #{report.id.slice(0, 8).toUpperCase()}.
                     </div>
                   ) : null}
-                  {snapshot.actionPlan?.safetyPreamble && (
+                  {reportActionPlan?.safetyPreamble && (
                     <div className="bg-[#fff8e7] border border-[#ffdcbd] rounded-lg px-4 py-3 flex gap-2 items-start">
                       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0 mt-0.5"><path d="M8 1.5L1 14.5h14L8 1.5z" stroke="#623f18" strokeWidth="1.4" strokeLinejoin="round"/><path d="M8 6v4M8 11.5h.01" stroke="#623f18" strokeWidth="1.4" strokeLinecap="round"/></svg>
-                      <span className="text-sm text-[#623f18] leading-5">{snapshot.actionPlan.safetyPreamble}</span>
+                      <span className="text-sm text-[#623f18] leading-5">{reportActionPlan.safetyPreamble}</span>
                     </div>
                   )}
                   <div className="flex items-center justify-between">
                     <div>
                       <div className="text-[#717973] text-xs uppercase tracking-[0.8px]">RRR Score</div>
-                      <div className="text-4xl font-bold text-[#1a1c18] mt-1">{(snapshot.verdict.rrrScore * 100).toFixed(0)}%</div>
+                      <div className="text-4xl font-bold text-[#1a1c18] mt-1">{(reportVerdict.rrrScore * 100).toFixed(0)}%</div>
                     </div>
                     <div className="text-right">
                       <div className="text-[#717973] text-xs uppercase tracking-[0.8px]">Verdict</div>
-                      <div className="text-xl font-semibold mt-1" style={{ color: VERDICT_COLORS[snapshot.verdict.label] ?? "#1a1c18" }}>
-                        {VERDICT_LABELS[snapshot.verdict.label] ?? snapshot.verdict.label}
+                      <div className="text-xl font-semibold mt-1" style={{ color: VERDICT_COLORS[reportVerdict.label] ?? "#1a1c18" }}>
+                        {VERDICT_LABELS[reportVerdict.label] ?? reportVerdict.label}
                       </div>
                     </div>
                   </div>
                   <div className="border-t border-[#e2e3db] pt-4 flex flex-col gap-2.5">
-                    {breakdownRows(snapshot.verdict.breakdown).map((row) => (
+                    {breakdownRows(reportVerdict.breakdown).map((row) => (
                       <div key={row.label} className="flex items-center justify-between">
                         <span className="text-[#717973] text-sm">{row.label} <span className="text-[#c1c8c2]">({row.weight})</span></span>
                         <div className="flex items-center gap-2">
@@ -484,27 +516,22 @@ function RepairWorkspaceContent({ id }: { id: string }) {
                     ))}
                   </div>
                   <div className="bg-[#f3f4ec] rounded-lg px-4 py-3 text-sm text-[#414844] leading-5">
-                    <span className="font-medium text-[#1a1c18]">Note: </span>{snapshot.verdict.uncertaintyNote}
+                    <span className="font-medium text-[#1a1c18]">Note: </span>{reportVerdict.uncertaintyNote}
                   </div>
-                  {snapshot.report ? (
+                  {reportActionPlan?.steps.length ? (
                     <div className="border-t border-[#e2e3db] pt-4 flex flex-col gap-3">
-                      <div>
-                        <p className="text-[#1a1c18] text-sm font-semibold">Publish to Community</p>
-                        <p className="text-[#717973] text-sm mt-1">
-                          Share only the board-safe summary so campus helpers can offer repair support.
-                        </p>
+                      <div className="text-[#717973] text-xs uppercase tracking-[0.8px]">Action Plan</div>
+                      <div className="grid gap-2">
+                        {reportActionPlan.steps.map((step) => (
+                          <div key={step.order} className="bg-[#f9faf2] border border-[#e2e3db] rounded-lg px-4 py-3">
+                            <div className="flex items-center justify-between gap-3">
+                              <span className="font-semibold text-[#1a1c18] text-sm">{step.order}. {step.title}</span>
+                              <span className="text-[10px] uppercase rounded bg-[#e2e3db] text-[#414844] px-2 py-0.5">{step.difficulty}</span>
+                            </div>
+                            <p className="text-[#414844] text-sm mt-1 leading-5">{step.description}</p>
+                          </div>
+                        ))}
                       </div>
-                      <button
-                        type="button"
-                        onClick={publishToCommunity}
-                        disabled={publishStatus === "publishing" || publishStatus === "published"}
-                        className="w-fit bg-[#1b4332] text-white text-sm font-semibold px-5 py-3 rounded-lg hover:bg-[#012d1d] transition-colors disabled:opacity-60"
-                      >
-                        {publishStatus === "published" ? "Published" : publishStatus === "publishing" ? "Publishing..." : "Publish to Community"}
-                      </button>
-                      {publishStatus === "error" ? (
-                        <p className="text-[#991b1b] text-sm">{publishError}</p>
-                      ) : null}
                     </div>
                   ) : null}
                 </div>
@@ -520,6 +547,81 @@ function RepairWorkspaceContent({ id }: { id: string }) {
                 </div>
               )}
             </div>
+
+            {isComplete && report && boardSummary && (
+              <form onSubmit={handlePublish} className="bg-white border border-[#e2e3db] rounded-xl p-6 flex flex-col gap-4 shadow-[0px_4px_10px_rgba(27,67,50,0.04)]">
+                <div className="flex items-center justify-between gap-4">
+                  <h3 className="font-semibold text-[#1a1c18] text-base">Publish to Community</h3>
+                  {publishedRequestId && (
+                    <span className="text-[#1b4332] text-sm font-semibold">
+                      Request published
+                    </span>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <label className="flex flex-col gap-2 col-span-2">
+                    <span className="text-[#717973] text-xs uppercase tracking-[0.8px]">Title</span>
+                    <input
+                      value={publishTitle ?? boardSummary.title}
+                      onChange={(e) => setPublishTitle(e.target.value)}
+                      maxLength={200}
+                      className="border border-[#c1c8c2] rounded-lg px-3 py-2 text-sm text-[#1a1c18] focus:outline-none focus:border-[#1b4332] bg-white"
+                    />
+                  </label>
+                  <label className="flex flex-col gap-2 col-span-2">
+                    <span className="text-[#717973] text-xs uppercase tracking-[0.8px]">Public Summary</span>
+                    <textarea
+                      value={publishSummary ?? boardSummary.publicSummary}
+                      onChange={(e) => setPublishSummary(e.target.value)}
+                      maxLength={2000}
+                      rows={3}
+                      className="border border-[#c1c8c2] rounded-lg px-3 py-2 text-sm text-[#1a1c18] focus:outline-none focus:border-[#1b4332] bg-white resize-none"
+                    />
+                  </label>
+                  <label className="flex flex-col gap-2">
+                    <span className="text-[#717973] text-xs uppercase tracking-[0.8px]">Campus Area</span>
+                    <input
+                      value={publishCampusArea}
+                      onChange={(e) => setPublishCampusArea(e.target.value)}
+                      maxLength={100}
+                      placeholder="Engineering Meadow"
+                      className="border border-[#c1c8c2] rounded-lg px-3 py-2 text-sm text-[#1a1c18] focus:outline-none focus:border-[#1b4332] bg-white"
+                    />
+                  </label>
+                  <label className="flex flex-col gap-2">
+                    <span className="text-[#717973] text-xs uppercase tracking-[0.8px]">Preferred Time</span>
+                    <input
+                      value={publishPreferredTime}
+                      onChange={(e) => setPublishPreferredTime(e.target.value)}
+                      maxLength={200}
+                      placeholder="Weekday afternoon"
+                      className="border border-[#c1c8c2] rounded-lg px-3 py-2 text-sm text-[#1a1c18] focus:outline-none focus:border-[#1b4332] bg-white"
+                    />
+                  </label>
+                  <label className="flex flex-col gap-2 col-span-2">
+                    <span className="text-[#717973] text-xs uppercase tracking-[0.8px]">Skill Tags</span>
+                    <input
+                      value={publishSkillTags ?? boardSummary.skillTags.join(", ")}
+                      onChange={(e) => setPublishSkillTags(e.target.value)}
+                      maxLength={300}
+                      className="border border-[#c1c8c2] rounded-lg px-3 py-2 text-sm text-[#1a1c18] focus:outline-none focus:border-[#1b4332] bg-white"
+                    />
+                  </label>
+                </div>
+                {publishError && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-red-700 text-sm">
+                    {publishError.message}
+                  </div>
+                )}
+                <button
+                  type="submit"
+                  disabled={publishState === "submitting" || publishState === "published"}
+                  className="self-start bg-[#1b4332] text-white font-semibold text-sm tracking-[0.4px] px-5 py-3 rounded-full hover:bg-[#012d1d] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {publishState === "published" ? "Published" : publishState === "submitting" ? "Publishing..." : "Publish to Community"}
+                </button>
+              </form>
+            )}
           </div>
         </div>
       </div>

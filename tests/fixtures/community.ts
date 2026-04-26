@@ -16,6 +16,7 @@ export const SECOND_HELPER_USER_ID = "00000000-0000-4000-8000-000000000003";
 export const CASE_ID = "84920000-0000-4000-8000-000000000001";
 export const RUN_ID = "84920000-0000-4000-8000-000000000101";
 export const HELPER_REQUEST_ID = "84920000-0000-4000-8000-000000000201";
+export const REPORT_ID = "84920000-0000-4000-8000-000000000151";
 export const OFFER_ID = "84920000-0000-4000-8000-000000000301";
 export const CONVERSATION_ID = "84920000-0000-4000-8000-000000000401";
 
@@ -92,7 +93,7 @@ export const fixtureHelperRequestOpen: HelperRequestDetail = {
   id: HELPER_REQUEST_ID,
   case_id: CASE_ID,
   run_id: RUN_ID,
-  report_id: null,
+  report_id: REPORT_ID,
   user_id: OWNER_USER_ID,
   title: "Need help replacing MacBook Pro display cable (Flexgate)",
   public_summary:
@@ -104,6 +105,8 @@ export const fixtureHelperRequestOpen: HelperRequestDetail = {
   preferred_time: "Weekday evenings or weekends",
   skill_tags: ["macbook-repair", "ifixit", "display-cable"],
   safety_flags: [],
+  verdict_label: fixtureVerdict.label ?? null,
+  rrr_score: fixtureVerdict.rrr_score ?? null,
   status: "open",
   diagnosis_snapshot: fixtureDiagnosis as Record<string, unknown>,
   verdict_snapshot: fixtureVerdict as Record<string, unknown>,

@@ -269,7 +269,7 @@ export default async function HomePage() {
                 Sell or Trade an Item
               </Link>
               <Link
-                href="/repair/case-84920"
+                href="/repair/new"
                 className="flex items-center gap-2 bg-[#1b4332] text-white text-xs font-semibold tracking-[0.6px] px-6 py-3 rounded-lg hover:bg-[#012d1d] transition-colors"
               >
                 {`Check if It's Worth Repairing`}
@@ -419,7 +419,7 @@ export default async function HomePage() {
                     Need something repaired or diagnosed? Start a case to get guided repair advice.
                   </p>
                 </div>
-                <Link href="/repair/case-84920" className="bg-[#1b4332] text-white text-xs font-semibold tracking-[0.6px] px-6 py-3.5 rounded-lg hover:bg-[#012d1d] transition-colors">
+                <Link href="/repair/new" className="bg-[#1b4332] text-white text-xs font-semibold tracking-[0.6px] px-6 py-3.5 rounded-lg hover:bg-[#012d1d] transition-colors">
                   Get Repair Advice
                 </Link>
               </div>

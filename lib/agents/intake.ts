@@ -17,6 +17,8 @@ export async function runIntake(ctx: AgentContext, caseRecord: CaseRecord): Prom
 Device: ${caseRecord.category}
 Symptoms: ${wrapUserInput(caseRecord.symptoms)}
 Urgency: ${caseRecord.urgency}
+Model number: ${caseRecord.modelNumber ? wrapUserInput(caseRecord.modelNumber) : 'unknown'}
+User-provided repair quote: ${caseRecord.quoteCents != null ? `$${(caseRecord.quoteCents / 100).toFixed(2)}` : 'none'}
 
 Return a JSON object matching this schema:
 {

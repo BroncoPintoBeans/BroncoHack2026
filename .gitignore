@@ -47,4 +47,5 @@ init.sh
 
 # local orchestration/tooling
 .claude
+.superpowers/
 .worktrees/
