@@ -22,6 +22,12 @@ function formatReviewDate(value: string) {
   }).format(date);
 }
 
+function summarizeProductTitles(productTitles: string[]) {
+  if (productTitles.length === 0) return "No active products";
+  if (productTitles.length <= 3) return productTitles.join(", ");
+  return `${productTitles.slice(0, 3).join(", ")} +${productTitles.length - 3} more`;
+}
+
 export default async function SellerPage({
   params,
 }: {
@@ -53,6 +59,14 @@ export default async function SellerPage({
             <p className="mt-1 text-sm text-[#717973]">
               {profile.totalReviews} {profile.totalReviews === 1 ? "review" : "reviews"}
             </p>
+            <div className="mt-5 rounded-xl border border-[#e2e3db] bg-[#f9faf2] p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.6px] text-[#717973]">
+                Products
+              </p>
+              <p className="mt-2 text-sm leading-relaxed text-[#414844]">
+                {summarizeProductTitles(profile.productTitles)}
+              </p>
+            </div>
 
             {user?.id && user.id !== profile.sellerId ? (
               <div className="mt-6 rounded-xl border border-[#e2e3db] bg-[#f9faf2] p-4">

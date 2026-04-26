@@ -40,6 +40,12 @@ export interface MarketplaceListingFilters {
   limit?: number;
 }
 
+export interface MarketplaceSellerSummary {
+  sellerId: string;
+  displayName: string;
+  productTitles: string[];
+}
+
 interface MarketplaceMediaRow {
   id: string;
   storage_path: string;
@@ -149,6 +155,30 @@ function withSellerNames(listings: MarketplaceListing[], sellerNames: Map<string
   }));
 }
 
+function uniqueProductTitles(
+  rows: Array<{ title: string | null }>,
+  preferredTitle?: string | null
+) {
+  const seen = new Set<string>();
+  const productTitles: string[] = [];
+
+  const pushTitle = (value?: string | null) => {
+    const title = value?.trim();
+    if (!title) return;
+
+    const key = title.toLowerCase();
+    if (seen.has(key)) return;
+
+    seen.add(key);
+    productTitles.push(title);
+  };
+
+  pushTitle(preferredTitle);
+  for (const row of rows) pushTitle(row.title);
+
+  return productTitles;
+}
+
 function matchesSearch(listing: MarketplaceListing, q: string) {
   const normalized = q.trim().toLowerCase();
   if (!normalized) return true;
@@ -246,12 +276,29 @@ export async function listMarketplaceListingsBySeller(
   return withSellerNames(listings, sellerNames);
 }
 
-export async function getMarketplaceSellerSummary(sellerId: string) {
+export async function getMarketplaceSellerSummary(
+  sellerId: string,
+  preferredTitle?: string | null
+): Promise<MarketplaceSellerSummary> {
   const supabase = await createClient();
-  const sellerNames = await getUserDisplayNames([sellerId], supabase);
+  const [sellerNames, { data, error }] = await Promise.all([
+    getUserDisplayNames([sellerId], supabase),
+    supabase
+      .from("marketplace_listings")
+      .select("title")
+      .eq("seller_id", sellerId)
+      .eq("status", "active")
+      .order("created_at", { ascending: false }),
+  ]);
+
+  if (error) throw new Error(error.message);
 
   return {
     sellerId,
     displayName: sellerNames.get(sellerId) ?? "Campus seller",
+    productTitles: uniqueProductTitles(
+      (data ?? []) as Array<{ title: string | null }>,
+      preferredTitle
+    ),
   };
 }
