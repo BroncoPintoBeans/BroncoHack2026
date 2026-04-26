@@ -162,7 +162,7 @@ function RepairGuidePage() {
             href="/repair/new"
             className="bg-[#1b4332] text-white text-sm font-semibold tracking-[0.6px] px-6 py-3 rounded-lg hover:bg-[#012d1d] transition-colors"
           >
-            Generate Report
+            + New Repair Case
           </Link>
         </section>
       </main>

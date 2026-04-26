@@ -116,7 +116,7 @@ export default function MarketplaceDetailClient({
       <div className="min-h-screen bg-[#f9faf2]">
         <Navbar />
         <main className="max-w-[980px] mx-auto px-6 py-10">
-          <BackButton fallbackHref="/marketplace" label="Back to Marketplace" className="mb-6" />
+          <BackButton fallbackHref="/marketplace" label="Back" className="mb-6" />
 
           <div className="mb-8">
             <p className="text-[#717973] text-sm font-semibold tracking-[0.6px] uppercase">Listing Manager</p>
@@ -190,7 +190,7 @@ export default function MarketplaceDetailClient({
     <div className="min-h-screen bg-[#f9faf2]">
       <Navbar />
       <div className="max-w-[1280px] mx-auto px-6 py-10">
-        <BackButton fallbackHref="/marketplace" label="Back to Marketplace" className="mb-6" />
+        <BackButton fallbackHref="/marketplace" label="Back" className="mb-6" />
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
           <div className="lg:col-span-7 flex flex-col gap-4">

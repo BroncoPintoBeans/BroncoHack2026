@@ -224,17 +224,14 @@ export default function Navbar() {
           </Suspense>
           {user ? (
             <div className="flex items-center gap-3">
-              <Link
-                href="/dashboard"
-                className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-[#e2e3db] transition-colors"
-              >
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg">
                 <div className="w-7 h-7 bg-[#1b4332] rounded-full flex items-center justify-center">
                   <span className="text-white text-xs font-bold">
                     {displayName?.[0]?.toUpperCase() ?? "U"}
                   </span>
                 </div>
                 <span className="text-[#1a1c18] text-xs font-semibold hidden sm:block">{displayName}</span>
-              </Link>
+              </div>
               <form action={signOut}>
                 <button
                   type="submit"
