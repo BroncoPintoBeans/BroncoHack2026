@@ -217,3 +217,41 @@ export async function getMarketplaceListingById(id: string) {
     sellerName: sellerNames.get(listing.sellerId) ?? null,
   };
 }
+
+export async function listMarketplaceListingsBySeller(
+  sellerId: string,
+  status = "active",
+  limit = 12
+) {
+  const supabase = await createClient();
+  let query = supabase
+    .from("marketplace_listings")
+    .select(LISTING_SELECT)
+    .eq("seller_id", sellerId)
+    .order("created_at", { ascending: false })
+    .limit(Math.min(limit, 24));
+
+  if (status) {
+    query = query.eq("status", status);
+  }
+
+  const { data, error } = await query;
+  if (error) throw new Error(error.message);
+
+  const listings = ((data ?? []) as MarketplaceListingRow[]).map((row) =>
+    rowToMarketplaceListing(supabase, row)
+  );
+  const sellerNames = await getUserDisplayNames([sellerId], supabase);
+
+  return withSellerNames(listings, sellerNames);
+}
+
+export async function getMarketplaceSellerSummary(sellerId: string) {
+  const supabase = await createClient();
+  const sellerNames = await getUserDisplayNames([sellerId], supabase);
+
+  return {
+    sellerId,
+    displayName: sellerNames.get(sellerId) ?? "Campus seller",
+  };
+}

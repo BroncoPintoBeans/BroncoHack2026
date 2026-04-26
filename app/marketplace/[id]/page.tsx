@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import MarketplaceDetailClient from "@/components/marketplace/MarketplaceDetailClient";
 import { getMarketplaceListingById } from "@/lib/db/marketplace/listings";
+import { getSellerOverview } from "@/lib/db/marketplace/sellers";
 import { getUser } from "@/lib/server/auth";
 
 export const dynamic = "force-dynamic";
@@ -15,5 +16,13 @@ export default async function ItemDetailPage({
 
   if (!item) notFound();
 
-  return <MarketplaceDetailClient item={item} isOwner={user?.id === item.sellerId} />;
+  const sellerOverview = await getSellerOverview(item.sellerId);
+
+  return (
+    <MarketplaceDetailClient
+      item={item}
+      isOwner={user?.id === item.sellerId}
+      sellerOverview={sellerOverview}
+    />
+  );
 }

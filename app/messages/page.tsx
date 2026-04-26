@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import MessagesSeenTracker from "./MessagesSeenTracker";
 import BackButton from "@/components/BackButton";
 import Navbar from "@/components/Navbar";
 import {
@@ -110,6 +111,10 @@ export default async function MessagesPage({
   const activeMessages = activeConversation
     ? await listMarketplaceMessages(activeConversation.id, user.id)
     : [];
+  const latestActiveMessageAt =
+    activeMessages[activeMessages.length - 1]?.createdAt ??
+    activeConversation?.lastMessageAt ??
+    null;
   const isDirectChat = Boolean(direct || draftListing);
   const draftRecipientName = draftListing?.sellerName ?? "Seller";
   const draftRecipientInitial = draftRecipientName[0]?.toUpperCase() ?? "S";
@@ -122,6 +127,10 @@ export default async function MessagesPage({
   return (
     <div className="min-h-screen bg-[#f9faf2]">
       <Navbar />
+      <MessagesSeenTracker
+        conversationId={activeConversation?.id ?? null}
+        seenAt={latestActiveMessageAt}
+      />
       <div className="max-w-[1280px] mx-auto px-6 py-8 flex flex-col" style={{ height: "calc(100vh - 73px)" }}>
         <div className="min-h-0 flex-1 bg-white border border-[#e2e3db] rounded-2xl shadow-[0px_4px_20px_0px_rgba(27,67,50,0.06)] overflow-hidden flex">
           {!isDirectChat ? (

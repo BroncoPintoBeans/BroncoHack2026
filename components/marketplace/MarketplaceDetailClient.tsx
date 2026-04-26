@@ -6,10 +6,12 @@ import { useEffect, useMemo, useState } from "react";
 import BackButton from "@/components/BackButton";
 import Navbar from "@/components/Navbar";
 import type { MarketplaceListing } from "@/lib/db/marketplace/listings";
+import type { SellerOverview } from "@/lib/db/marketplace/sellers";
 
 interface MarketplaceDetailClientProps {
   item: MarketplaceListing;
   isOwner: boolean;
+  sellerOverview: SellerOverview;
 }
 
 function formatPrice(item: MarketplaceListing) {
@@ -67,7 +69,11 @@ function readWishlistIds() {
   }
 }
 
-export default function MarketplaceDetailClient({ item, isOwner }: MarketplaceDetailClientProps) {
+export default function MarketplaceDetailClient({
+  item,
+  isOwner,
+  sellerOverview,
+}: MarketplaceDetailClientProps) {
   const router = useRouter();
   const [index, setIndex] = useState(0);
   const [saved, setSaved] = useState(false);
@@ -272,15 +278,26 @@ export default function MarketplaceDetailClient({ item, isOwner }: MarketplaceDe
               </div>
             ) : null}
 
-            <div className="flex items-center gap-3 p-4 bg-white border border-[#e2e3db] rounded-xl">
+            <Link
+              href={`/sellers/${item.sellerId}`}
+              className="flex items-center gap-3 rounded-xl border border-[#e2e3db] bg-white p-4 transition-colors hover:bg-[#f9faf2]"
+            >
               <div className="w-10 h-10 rounded-full bg-[#1b4332] flex items-center justify-center text-white font-semibold">
-                {(item.sellerName ?? "Seller")[0]?.toUpperCase()}
+                {(sellerOverview.displayName ?? item.sellerName ?? "Seller")[0]?.toUpperCase()}
               </div>
-              <div>
-                <p className="font-semibold text-[#1a1c18] text-sm">{item.sellerName ?? "Seller"}</p>
-                <p className="text-[#717973] text-xs">Seller</p>
+              <div className="min-w-0">
+                <p className="font-semibold text-[#1a1c18] text-sm">
+                  {sellerOverview.displayName ?? item.sellerName ?? "Seller"}
+                </p>
+                <p className="text-[#717973] text-xs">
+                  {sellerOverview.averageRating
+                    ? `${sellerOverview.averageRating.toFixed(1)} stars (${sellerOverview.totalReviews})`
+                    : sellerOverview.totalReviews > 0
+                      ? `${sellerOverview.totalReviews} reviews`
+                      : "Seller profile"}
+                </p>
               </div>
-            </div>
+            </Link>
 
             <div className="flex flex-col gap-3">
               <button
