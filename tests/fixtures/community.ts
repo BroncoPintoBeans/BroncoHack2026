@@ -49,6 +49,10 @@ export const fixtureDiagnosis: DiagnosisSnapshot = {
   confidence: 0.87,
   missing_evidence: ["Serial number age confirmation"],
   safety_flags: [],
+  technician_questions: [
+    "Does the display dim or flicker only after the lid passes a certain angle?",
+    "Has the laptop had any recent drops, liquid exposure, or display repairs?",
+  ],
 };
 
 export const fixtureVerdict: VerdictSnapshot = {

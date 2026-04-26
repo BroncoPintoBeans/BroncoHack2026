@@ -26,6 +26,7 @@ export function buildContextSnapshot(
         confidence: row.confidence,
         missing_evidence: row.missing_evidence,
         safety_flags: row.safety_flags,
+        technician_questions: row.technician_questions,
       };
       break;
     }

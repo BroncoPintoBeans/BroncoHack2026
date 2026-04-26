@@ -86,6 +86,7 @@ export interface DiagnosisSnapshot {
   confidence?: number;
   missing_evidence?: string[];
   safety_flags?: string[];
+  technician_questions?: string[];
 }
 
 export interface VerdictSnapshot {

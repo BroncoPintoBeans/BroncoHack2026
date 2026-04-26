@@ -29,7 +29,9 @@ Sub-agents persist outputs per this rule — no ambiguity:
 | `diagnosis` | `diagnoses` (one row per run) | — |
 | `economics` | `verdicts` (one row per run) | — |
 | `action_plan` | `action_plans` (one row per run, includes `safety_preamble`) | — |
-| `helper_routing` | `helper_requests` (one row per run) | — |
+| `helper_routing` | `helper_routing_results` (one row per run, private match output) | — |
+
+Do not persist helper-routing agent match output to `helper_requests`. `helper_requests` is the community repair board that users intentionally publish to when they want peer help.
 
 **`awaiting_user` is NOT durable-write territory** — partial state lives in `case_events.payload` (most recent `status='awaiting_user'` event for the phase) + `case_runs.awaiting_question`. Agents write durable rows only on true `status='complete'`. On resume after follow-up, the orchestrator re-runs the phase from `awaiting_user` state and writes the row once on completion.
 

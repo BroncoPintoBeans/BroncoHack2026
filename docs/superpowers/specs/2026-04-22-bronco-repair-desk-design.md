@@ -412,6 +412,7 @@ create table diagnoses (
   confidence numeric not null check (confidence between 0 and 1),
   missing_evidence jsonb not null default '[]',
   safety_flags jsonb not null default '[]',
+  technician_questions jsonb not null default '[]',
   raw_response jsonb,
   created_at timestamptz default now()
 );
@@ -442,6 +443,15 @@ create table action_plans (
   created_at timestamptz default now()
 );
 
+create table helper_routing_results (
+  run_id uuid primary key references case_runs(id) on delete cascade,
+  case_id uuid not null references cases(id) on delete cascade,
+  user_id uuid not null references auth.users(id),
+  matches jsonb not null default '[]',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 -- Community board (stretch)
 create table helper_requests (
   id uuid primary key default gen_random_uuid(),
@@ -466,19 +476,24 @@ create table category_reference (
 create view current_case_outputs as
   select c.id as case_id, c.user_id, r.id as run_id,
          d.top_causes, d.confidence, d.safety_flags,
+         d.technician_questions as diagnosis_technician_questions,
          v.rrr_score, v.rrr_breakdown, v.label, v.rationale, v.uncertainty_note,
          v.repair_low_cents, v.repair_high_cents, v.replacement_value_cents,
-         a.steps, a.technician_questions, a.safety_preamble
+         a.steps,
+         a.technician_questions as action_plan_technician_questions,
+         a.safety_preamble,
+         h.matches as helper_matches
   from cases c
   join case_runs r on r.case_id = c.id and r.is_current
   left join diagnoses d on d.run_id = r.id
   left join verdicts v on v.run_id = r.id
-  left join action_plans a on a.run_id = r.id;
+  left join action_plans a on a.run_id = r.id
+  left join helper_routing_results h on h.run_id = r.id;
 ```
 
 ### 8.2 RLS posture
 
-- `cases`, `case_media`, `case_runs`, `case_messages`, `case_events`, `diagnoses`, `verdicts`, `action_plans`: `select` / `insert` / `update` restricted to `user_id = auth.uid()`. No delete policy (demo-grade; add later).
+- `cases`, `case_media`, `case_runs`, `case_messages`, `case_events`, `diagnoses`, `verdicts`, `action_plans`, `helper_routing_results`: `select` / `insert` / `update` restricted to `user_id = auth.uid()`. No delete policy (demo-grade; add later).
 - `helper_requests`: `select` for all authenticated users (community); `insert` / `update` restricted to own `user_id`.
 - `category_reference`: `select` for all authenticated users; no writes.
 - `technician_profiles`: public authenticated `select`; profile owner or service role may update helper metadata.
