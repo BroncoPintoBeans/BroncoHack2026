@@ -1,4 +1,4 @@
--- Bronco Tokens backend schema.
+-- Green Points backend schema.
 -- Apply this to Supabase before enabling persistent rewards.
 -- Without Supabase service-role env vars, the app uses the isolated demo ledger
 -- in lib/db/demo-store.ts and the default demo user from lib/rewards/data.ts.

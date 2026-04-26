@@ -11,10 +11,10 @@ Own everything the demo audience sees on the phone and laptop — camera capture
 > **Prototype note:** The working prototype lives at `bronco-repair-desk/` and was scaffolded with **Next.js 16** (not Next.js 15 as originally planned). All page files below follow Next.js App Router conventions.
 
 **Core repair desk (original scope):**
-- `app/(app)/new/page.tsx` (camera intake — phone hero)
-- `app/(app)/case/[id]/page.tsx` (live verdict view)
-- `app/(app)/demo/page.tsx` (director view — stretch only)
-- `app/(app)/layout.tsx` · `app/layout.tsx` · `app/globals.css`
+- `app/repair/new/page.tsx` (camera intake — phone hero)
+- `app/repair/[id]/page.tsx` (live verdict view)
+- `app/page.tsx` (landing page — marketplace preview + repair verdict preview)
+- `app/layout.tsx` · `app/globals.css`
 - `components/ui/**` (shadcn primitives)
 - `components/camera/CameraCapture.tsx`
 - `components/timeline/AgentTimeline.tsx`

@@ -205,7 +205,7 @@ Gating: video is behind `FEATURE_VIDEO_INTAKE=false` until a stream owner flips 
 
 ```
 ┌────────────────┐          ┌──────────────────────────────────┐
-│  Phone browser │◄──HTTPS──┤         Next.js 15 (Vercel)       │
+│  Phone browser │◄──HTTPS──┤         Next.js 16 (Vercel)       │
 │  (capture UX)  │          │  /api/cases  (CRUD)                │       ┌─────────────┐
 └──────┬─────────┘          │  /api/cases/:id/run                │──────►│ Gemini API  │
        │                    │  /api/cases/:id/media              │       │ Flash + Pro │
