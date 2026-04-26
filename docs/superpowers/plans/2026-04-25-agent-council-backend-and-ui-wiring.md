@@ -295,8 +295,8 @@ Conflict-risk files: `lib/types/index.ts`, `bronco-repair-desk/package.json`. Bo
 
 **Branch:** `agent-council-persistence` | **Worktree:** `.worktrees/persistence` | **Depends on:** Lane 1 merged
 
-- [ ] Create `lib/db/migrations/001_init.sql` — full schema from §8.1 of design spec (all 14 tables + `current_case_outputs` view + Realtime publication)
-- [ ] Create `lib/db/migrations/002_seed_category_reference.sql` — seed `category_reference` for all 4 categories (failure modes, cost bands, diagnostic questions, safety warnings including `battery_swelling`, `refrigerant_leak`, `brake_failure`, `scooter_battery_thermal`)
+- [x] ~~Create `lib/db/migrations/001_init.sql`~~ **SKIP — schema already deployed in Supabase cloud. Revisit when Supabase MCP is connected.**
+- [x] ~~Create `lib/db/migrations/002_seed_category_reference.sql`~~ **SKIP — same reason as above.**
 - [ ] Create `lib/db/client.ts` — export `supabase` (service role client); export `isSupabaseAvailable(): boolean`
 - [ ] Create `lib/db/demo-store.ts` — in-memory store implementing the same interface as queries/; seeded from `tests/fixtures/demo-cases.ts`; writes are ephemeral
 - [ ] Create `lib/db/queries/cases.ts` — `createCase`, `getCase`, `listCases`, `updateCase`; routes through Supabase or demo-store based on `isSupabaseAvailable()`
