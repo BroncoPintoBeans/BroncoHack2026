@@ -17,6 +17,54 @@ Bronco Repair Desk is a dual-mode campus sustainability platform built for Cal P
 - **Gamification / Redemptions** — Points redeemable at campus vendors (Panda Express, Pony Express); achievement badges unlock at milestones
 - **Create Listing** — 4-step guided form (item details, condition, listing type, photos)
 
+## Verdict Agent Interaction
+
+The Repair Verdict Desk is coordinated by one orchestrator that advances a case through the verdict agents, emits live `case_events` for the Agent Review Board, and persists each completed phase to the durable table owned by that phase.
+
+```mermaid
+flowchart LR
+  student[Student repair case]
+  marketplace[Repair Needed marketplace listing]
+  orchestrator[Orchestrator]
+  events[(case_events)]
+  ui[Agent Review Board /repair/:id]
+
+  intake[Intake Agent]
+  diagnosis[Diagnosis Agent]
+  economics[Economics Agent]
+  action[Action Plan Agent]
+  helper[Helper Routing Agent]
+
+  diagnoses[(diagnoses)]
+  verdicts[(verdicts)]
+  plans[(action_plans)]
+  helpers[(helper_requests)]
+
+  student --> orchestrator
+  marketplace -->|category + description context| orchestrator
+  orchestrator -->|queued / running / awaiting_user / complete / failed| events
+  events --> ui
+
+  orchestrator --> intake
+  intake -->|parsed item, symptoms, media context| diagnosis
+  diagnosis -->|fault hypothesis, confidence, safety flags| economics
+  economics -->|RRR score, repair-vs-replace costs, CO2 impact| action
+  action -->|safe repair steps, do-not-attempt guidance| helper
+
+  diagnosis --> diagnoses
+  economics --> verdicts
+  action --> plans
+  helper -->|optional community repair handoff| helpers
+```
+
+| Agent | Role in the verdict | Completion output |
+|---|---|---|
+| Intake | Normalizes the student's description, item category, photos, and marketplace context into a structured case input. | `case_events` payload |
+| Diagnosis | Determines likely failure modes, confidence, follow-up questions, and safety flags. | `diagnoses` row |
+| Economics | Computes the RRR score, repair cost band, replacement cost band, verdict label, and sustainability impact. | `verdicts` row |
+| Action Plan | Converts the verdict into student-facing next steps and applies the safety guard before any repair instructions appear. | `action_plans` row |
+| Helper Routing | Publishes eligible verdicts to Communal Repair when a student wants campus repair help. | `helper_requests` row |
+
 ## Tech Stack
 
 | Layer | Technology |
