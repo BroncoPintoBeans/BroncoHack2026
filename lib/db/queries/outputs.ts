@@ -16,7 +16,7 @@ export async function writeDiagnosis(
 ): Promise<void> {
   if (isSupabaseAvailable()) {
     const userId = await getCaseUserId(caseId)
-    const { error } = await getSupabaseClient()
+    const { error } = await (await getSupabaseClient())
       .from('diagnoses')
       .upsert({
         case_id: caseId,
@@ -40,7 +40,7 @@ export async function writeVerdict(
 ): Promise<void> {
   if (isSupabaseAvailable()) {
     const userId = await getCaseUserId(caseId)
-    const { error } = await getSupabaseClient()
+    const { error } = await (await getSupabaseClient())
       .from('verdicts')
       .upsert({
         case_id: caseId,
@@ -66,7 +66,7 @@ export async function writeActionPlan(
 ): Promise<void> {
   if (isSupabaseAvailable()) {
     const userId = await getCaseUserId(caseId)
-    const { error } = await getSupabaseClient()
+    const { error } = await (await getSupabaseClient())
       .from('action_plans')
       .upsert({
         case_id: caseId,
@@ -89,7 +89,7 @@ export async function writeHelperRequest(
 ): Promise<void> {
   if (isSupabaseAvailable()) {
     const userId = await getCaseUserId(caseId)
-    const { error } = await getSupabaseClient()
+    const { error } = await (await getSupabaseClient())
       .from('helper_routing_results')
       .upsert({
         case_id: caseId,

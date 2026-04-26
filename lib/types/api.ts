@@ -1,5 +1,6 @@
 import type { CaseCategory, Urgency } from './agents'
 import type { CaseRecord, CaseMediaRecord, CaseEventRecord, CurrentCaseOutput } from './case'
+import type { HelperRequestDetail } from './community/helper-requests'
 
 export interface CreateCaseRequest {
   category: CaseCategory
@@ -22,13 +23,7 @@ export interface UpdateCaseRequest {
 }
 export interface UpdateCaseResponse { case: CaseRecord }
 
-export interface CreateMediaRequest {
-  url?: string
-  dataUrl?: string
-  mediaType: 'image' | 'video'
-  fileType?: string
-  fileName?: string
-}
+export interface CreateMediaRequest { file: File }
 export interface CreateMediaResponse { media: CaseMediaRecord }
 
 export interface StartRunResponse {
@@ -43,3 +38,20 @@ export interface FollowupResponse { status: 'complete' | 'awaiting_user' | 'fail
 export interface GetCurrentResponse { snapshot: CurrentCaseOutput }
 
 export interface GetEventsResponse { events: CaseEventRecord[] }
+
+export interface PublishHelperRequestRequest {
+  report_id: string
+  title?: string
+  public_summary?: string
+  campus_area?: string
+  preferred_time?: string
+  skill_tags?: string[]
+}
+export interface PublishHelperRequestResponse {
+  helper_request: HelperRequestDetail
+  created: boolean
+}
+
+export interface GetPublishedHelperRequestResponse {
+  helper_request: HelperRequestDetail | null
+}

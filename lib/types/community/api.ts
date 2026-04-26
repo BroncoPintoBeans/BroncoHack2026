@@ -18,6 +18,7 @@ export interface PageInfo {
 
 // POST /api/cases/[id]/helper-request
 export interface CreateHelperRequestBody {
+  report_id: string;
   title?: string;
   public_summary?: string;
   campus_area?: string;

@@ -669,7 +669,7 @@ export default function CreateListingPage() {
               )}
               <div className="bg-[rgba(193,236,212,0.2)] border border-[#c1ecd4] rounded-xl p-4 flex items-start gap-3">
                 <svg className="shrink-0 mt-0.5" width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="9" stroke="#274e3d" strokeWidth="1.5"/><path d="M10 6v4.5M10 13h.01" stroke="#274e3d" strokeWidth="1.5" strokeLinecap="round"/></svg>
-                <p className="text-[#274e3d] text-sm leading-relaxed">If your item is damaged, consider using the <Link href="/repair/case-84920" className="font-semibold underline">Repair Verdict</Link> tool first. Items with a repair verdict attached get 2× more interest!</p>
+                <p className="text-[#274e3d] text-sm leading-relaxed">If your item is damaged, consider using the <Link href="/repair/new" className="font-semibold underline">Repair Verdict</Link> tool first. Items with a repair verdict attached get 2× more interest!</p>
               </div>
             </div>
           )}

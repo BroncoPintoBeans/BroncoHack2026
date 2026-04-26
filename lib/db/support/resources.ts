@@ -258,4 +258,3 @@ export async function listSupportResources(): Promise<SupportResource[]> {
     lastVerifiedAt: row.last_verified_at,
   }));
 }
-

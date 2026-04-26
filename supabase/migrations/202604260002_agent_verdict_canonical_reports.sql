@@ -5,6 +5,7 @@ create table if not exists public.case_reports (
   case_id uuid not null references public.cases(id) on delete cascade,
   run_id uuid not null unique references public.case_runs(id) on delete cascade,
   user_id uuid not null references auth.users(id) on delete cascade,
+  report_version integer not null default 1,
   report_json jsonb not null,
   board_summary_json jsonb not null,
   created_at timestamptz not null default now(),
@@ -12,6 +13,9 @@ create table if not exists public.case_reports (
   constraint case_reports_report_json_object check (jsonb_typeof(report_json) = 'object'),
   constraint case_reports_board_summary_json_object check (jsonb_typeof(board_summary_json) = 'object')
 );
+
+alter table public.case_reports
+  add column if not exists report_version integer not null default 1;
 
 create index if not exists case_reports_case_created_idx
   on public.case_reports(case_id, created_at desc);

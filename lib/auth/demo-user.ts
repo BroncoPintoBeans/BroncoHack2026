@@ -1,20 +1,17 @@
 import { isSupabaseAvailable } from '../db/client'
-import { getSupabaseClient } from '../db/client'
+import { createClient } from '@/lib/supabase/server'
 
 export const DEMO_USER_ID = process.env.DEMO_USER_ID ?? 'demo-user-00000000-0000-0000-0000-000000000000'
 
 export async function getRequestUserId(request?: Request): Promise<string | null> {
+  void request
+
   if (!isSupabaseAvailable()) {
     return DEMO_USER_ID
   }
 
-  const authHeader = request?.headers.get('authorization')
-  const token = authHeader?.match(/^Bearer\s+(.+)$/i)?.[1]
-  if (!token) {
-    return null
-  }
-
-  const { data, error } = await getSupabaseClient().auth.getUser(token)
+  const supabase = await createClient()
+  const { data, error } = await supabase.auth.getUser()
   if (error || !data.user) return null
   return data.user.id
 }

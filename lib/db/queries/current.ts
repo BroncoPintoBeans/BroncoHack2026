@@ -3,7 +3,8 @@ import { demoStore } from '../demo-store'
 import { getCase } from './cases'
 import { getCurrentRun } from './runs'
 import { listEvents } from './events'
-import { getLatestCaseReport } from './reports'
+import { listCaseMedia } from './media'
+import { createOrUpdateCaseReportForRun, getLatestCaseReport } from './reports'
 import type { CurrentCaseOutput } from '../../types/case'
 import type { DiagnosisCompletePayload, EconomicsPayload, ActionPlanPayload, HelperMatch } from '../../types/payloads'
 import {
@@ -17,14 +18,16 @@ import {
 
 export async function getCurrentCaseOutput(caseId: string): Promise<CurrentCaseOutput | null> {
   if (isSupabaseAvailable()) {
-    const supabase = getSupabaseClient()
+    const supabase = await getSupabaseClient()
 
     const caseRecord = await getCase(caseId)
     if (!caseRecord) return null
 
     const currentRun = await getCurrentRun(caseId)
-    const events = await listEvents(caseId)
-    const report = await getLatestCaseReport(caseId)
+    const [events, media] = await Promise.all([
+      listEvents(caseId),
+      listCaseMedia(caseId),
+    ])
 
     // Load outputs for current run
     let diagnosis: DiagnosisCompletePayload | undefined
@@ -83,7 +86,12 @@ export async function getCurrentCaseOutput(caseId: string): Promise<CurrentCaseO
       }
     }
 
-    return { case: caseRecord, currentRun: currentRun ?? undefined, diagnosis, verdict, actionPlan, helperMatches, report: report ?? undefined, events }
+    let report = await getLatestCaseReport(caseId)
+    if (!report && currentRun?.status === 'complete') {
+      report = await createOrUpdateCaseReportForRun(caseId, currentRun.id)
+    }
+
+    return { case: caseRecord, currentRun: currentRun ?? undefined, media, report: report ?? undefined, diagnosis, verdict, actionPlan, helperMatches, events }
   }
 
   // Demo-store path
@@ -93,12 +101,16 @@ export async function getCurrentCaseOutput(caseId: string): Promise<CurrentCaseO
   const runId = demoStore.runsByCaseId.get(caseId)
   const currentRun = runId ? demoStore.runs.get(runId) : undefined
   const events = demoStore.events.get(caseId) ?? []
+  const media = demoStore.caseMedia.get(caseId) ?? []
   const diagnosis = demoStore.diagnoses.get(caseId)
   const verdict = demoStore.verdicts.get(caseId)
   const actionPlan = demoStore.actionPlans.get(caseId)
   const helperRequest = demoStore.helperRequests.get(caseId)
   const helperMatches = helperRequest?.matches
-  const report = await getLatestCaseReport(caseId)
+  let report = await getLatestCaseReport(caseId)
+  if (!report && currentRun?.status === 'complete') {
+    report = await createOrUpdateCaseReportForRun(caseId, currentRun.id)
+  }
 
-  return { case: caseRecord, currentRun, diagnosis, verdict, actionPlan, helperMatches, report: report ?? undefined, events }
+  return { case: caseRecord, currentRun, media, report: report ?? undefined, diagnosis, verdict, actionPlan, helperMatches, events }
 }

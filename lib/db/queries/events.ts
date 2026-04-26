@@ -6,6 +6,7 @@ import { getCase } from './cases'
 import {
   assertNoSupabaseError,
   EventRowSchema,
+  isUuid,
   parseDbRows,
   parseDbRow,
 } from './validation'
@@ -30,7 +31,7 @@ export async function insertEvent(
     const caseRecord = await getCase(event.caseId)
     if (!caseRecord) throw new Error(`insertEvent: case ${event.caseId} not found`)
 
-    const { data: row, error } = await getSupabaseClient()
+    const { data: row, error } = await (await getSupabaseClient())
       .from('case_events')
       .insert({
         case_id: event.caseId,
@@ -56,7 +57,9 @@ export async function insertEvent(
 
 export async function listEvents(caseId: string): Promise<CaseEventRecord[]> {
   if (isSupabaseAvailable()) {
-    const { data: rows, error } = await getSupabaseClient()
+    if (!isUuid(caseId)) return []
+
+    const { data: rows, error } = await (await getSupabaseClient())
       .from('case_events')
       .select()
       .eq('case_id', caseId)

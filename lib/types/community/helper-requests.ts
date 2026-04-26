@@ -36,6 +36,8 @@ export interface HelperRequest {
   preferred_time: string | null;
   skill_tags: string[];
   safety_flags: string[];
+  verdict_label: string | null;
+  rrr_score: number | null;
   status: HelperRequestStatus;
   diagnosis_snapshot: Record<string, unknown>;
   verdict_snapshot: Record<string, unknown>;

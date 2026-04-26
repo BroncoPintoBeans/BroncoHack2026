@@ -19,7 +19,7 @@ const MODEL_IDS: Record<ModelTier, string> = {
 }
 
 export function buildClient(tier: ModelTier) {
-  const apiKey = process.env.GOOGLE_API_KEY
+  const apiKey = process.env.GOOGLE_API_KEY ?? (process.env.NODE_ENV === 'test' ? undefined : process.env.GEMINI_API_KEY)
   if (!apiKey) return null
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { createGoogleGenerativeAI } = require('@ai-sdk/google')
