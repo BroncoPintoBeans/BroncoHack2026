@@ -86,16 +86,7 @@ export default async function SellerPage({
                       Thanks for leaving feedback after your exchange.
                     </p>
                   </>
-                ) : (
-                  <>
-                    <p className="text-sm font-semibold text-[#1a1c18]">
-                      Reviews unlock after a real exchange
-                    </p>
-                    <p className="mt-2 text-sm text-[#717973]">
-                      Once both of you have messaged each other, you can post a seller review here.
-                    </p>
-                  </>
-                )}
+                ) : null}
               </div>
             ) : null}
           </div>

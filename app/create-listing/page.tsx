@@ -60,6 +60,7 @@ export default function CreateListingPage() {
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [publishError, setPublishError] = useState("");
   const [isPublishing, setIsPublishing] = useState(false);
+  const [isSavingDraft, setIsSavingDraft] = useState(false);
   const [reviewMediaIndex, setReviewMediaIndex] = useState(0);
   const [isMediaExpanded, setIsMediaExpanded] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -336,6 +337,97 @@ export default function CreateListingPage() {
       setPublishError(getPublishErrorMessage(error));
     } finally {
       setIsPublishing(false);
+    }
+  };
+
+  const handleSaveDraft = async () => {
+    if (isPublishing || isSavingDraft) return;
+
+    setIsSavingDraft(true);
+    setPublishError("");
+
+    try {
+      const supabase = createClient();
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+
+      if (userError || !user) {
+        throw new Error("You need to be signed in before saving a draft.");
+      }
+
+      const safeTitle = title.trim() || "Untitled draft";
+      const safeCategory = selectedCategory || "Other";
+      const safeCondition = condition || "Used - Fair";
+      const safeDescription = description.trim();
+      const safePickupLocation = pickupLocation.trim() || "Campus pickup";
+      const draftPrice =
+        type === "sale" && price.trim() && Number(price) > 0 ? Number(price) : null;
+      const draftTradeRequest = type === "trade" ? tradeRequest.trim() || null : null;
+
+      const { data: listing, error: listingError } = await supabase
+        .from("marketplace_listings")
+        .insert({
+          title: safeTitle,
+          description: safeDescription,
+          category: safeCategory,
+          condition: safeCondition,
+          listing_type: type,
+          price: draftPrice,
+          trade_request: draftTradeRequest,
+          pickup_location: safePickupLocation,
+          seller_id: user.id,
+          status: "draft",
+        })
+        .select("id")
+        .single();
+
+      if (listingError) {
+        throw listingError;
+      }
+
+      if (media.length > 0) {
+        const uploadedMedia = await Promise.all(
+          media.map(async (item, index) => {
+            const extension =
+              item.file.name.split(".").pop()?.toLowerCase() ||
+              (item.file.type.startsWith("video/") ? "mp4" : "jpg");
+            const path = `${user.id}/${listing.id}/${index + 1}-${crypto.randomUUID()}.${extension}`;
+            const { error: uploadError } = await supabase.storage
+              .from("marketplace-media")
+              .upload(path, item.file, {
+                contentType: item.file.type,
+                upsert: false,
+              });
+
+            if (uploadError) {
+              throw uploadError;
+            }
+
+            return {
+              listing_id: listing.id,
+              storage_path: path,
+              media_type: item.file.type.startsWith("video/") ? "video" : "image",
+            };
+          })
+        );
+
+        const { error: mediaInsertError } = await supabase
+          .from("marketplace_media")
+          .insert(uploadedMedia);
+
+        if (mediaInsertError) {
+          throw mediaInsertError;
+        }
+      }
+
+      router.push(`/marketplace/${listing.id}/edit`);
+    } catch (error) {
+      console.error("Save draft failed:", error);
+      setPublishError(getPublishErrorMessage(error));
+    } finally {
+      setIsSavingDraft(false);
     }
   };
 
@@ -795,11 +887,25 @@ export default function CreateListingPage() {
             >
               Back
             </button>
-            {step < 4 ? (
-              <button onClick={handleContinue} className="bg-[#1b4332] text-white text-sm font-semibold px-8 py-2.5 rounded-lg hover:bg-[#012d1d] transition-colors">
-                Continue
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={handleSaveDraft}
+                disabled={isPublishing || isSavingDraft}
+                className={`border text-sm font-semibold px-6 py-2.5 rounded-lg transition-colors ${
+                  isPublishing || isSavingDraft
+                    ? "border-[#d7dbd1] text-[#717973] bg-[#f3f4ec] cursor-not-allowed"
+                    : "border-[#c1c8c2] text-[#1a1c18] hover:bg-[#f3f4ec]"
+                }`}
+              >
+                {isSavingDraft ? "Saving Draft..." : "Save Draft"}
               </button>
-            ) : null}
+              {step < 4 ? (
+                <button onClick={handleContinue} className="bg-[#1b4332] text-white text-sm font-semibold px-8 py-2.5 rounded-lg hover:bg-[#012d1d] transition-colors">
+                  Continue
+                </button>
+              ) : null}
+            </div>
           </div>
         </div>
       </div>
