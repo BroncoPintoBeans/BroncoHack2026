@@ -31,6 +31,10 @@ export async function proxy(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
 
+  if (pathname.startsWith("/api/")) {
+    return supabaseResponse;
+  }
+
   // Authenticated users visiting the sign-in page → send to /home
   if (user && pathname === "/") {
     const url = request.nextUrl.clone();

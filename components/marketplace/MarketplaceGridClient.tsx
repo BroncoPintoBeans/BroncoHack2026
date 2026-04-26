@@ -149,8 +149,12 @@ export default function MarketplaceGridClient({ initialItems }: MarketplaceGridC
         if (uid) setMyListings(initialItems.filter((it) => it.sellerId === uid));
       });
     } catch {
-      setUserId(null);
-      setMyListings([]);
+      const timer = window.setTimeout(() => {
+        setUserId(null);
+        setMyListings([]);
+      }, 0);
+
+      return () => window.clearTimeout(timer);
     }
   }, [initialItems]);
 

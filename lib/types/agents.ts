@@ -1,0 +1,6 @@
+export type CaseCategory = 'laptop' | 'bicycle' | 'scooter' | 'mini_fridge'
+export type AgentPhase = 'intake' | 'diagnosis' | 'economics' | 'action_plan' | 'helper_routing' | 'orchestrator'
+export type PhaseStatus = 'started' | 'running' | 'complete' | 'failed' | 'awaiting_user'
+export type ModelTier = 'flash' | 'pro'
+export type VerdictLabel = 'repair_now' | 'repair_if_cheap' | 'wait_monitor' | 'replace_soon' | 'replace_now'
+export type Urgency = 'low' | 'normal' | 'urgent'
