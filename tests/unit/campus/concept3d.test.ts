@@ -17,6 +17,14 @@ describe('Concept3D campus map helpers', () => {
     )
   })
 
+  it('ignores unverified marker IDs instead of inventing marker query params', () => {
+    const url = buildCampusMapUrl({ markerId: 'anything' })
+
+    expect(url).toBe(CPP_CONCEPT3D_BASE_URL)
+    expect(url).not.toContain('markerId=')
+    expect(url).not.toContain('share=')
+  })
+
   it('builds iframe src without requiring marker IDs', () => {
     const location = getCampusLocation('student-services-building')
 

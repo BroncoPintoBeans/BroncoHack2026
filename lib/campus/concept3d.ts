@@ -3,16 +3,8 @@ import type { CampusLocation, Concept3DMapTarget } from './locations'
 export const CPP_CONCEPT3D_MAP_ID = '1130'
 export const CPP_CONCEPT3D_BASE_URL = 'https://www.cpp.edu/maps/?id=1130'
 
-export function buildCampusMapUrl(args?: { markerId?: string }): string {
-  const markerId = args?.markerId?.trim()
-
-  if (!markerId) {
-    return CPP_CONCEPT3D_BASE_URL
-  }
-
-  const url = new URL(CPP_CONCEPT3D_BASE_URL)
-  url.searchParams.set('markerId', markerId)
-  return url.toString()
+export function buildCampusMapUrl(_args?: { markerId?: string }): string {
+  return CPP_CONCEPT3D_BASE_URL
 }
 
 export function buildCampusMapIframeSrc(
