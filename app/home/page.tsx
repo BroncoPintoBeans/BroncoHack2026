@@ -229,28 +229,8 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* How it Works */}
-      <section className="max-w-[1280px] mx-auto px-6 py-24">
-        <h2 className="font-semibold text-[#012d1d] text-2xl text-center mb-10">How it Works</h2>
-        <div className="grid grid-cols-3 gap-8">
-          {[
-            { step: "1. Upload", desc: "Snap a photo and provide a brief description of the item or issue.", bg: "#c1ecd4" },
-            { step: "2. Match", desc: "Get a repair verdict or find interested buyers in the campus network.", bg: "#ffdcbd" },
-            { step: "3. Act", desc: "Complete the trade or follow the guided steps to fix your gear.", bg: "#e1e6c2" },
-          ].map((item) => (
-            <div key={item.step} className="bg-white rounded-xl p-6 flex flex-col items-center gap-4 shadow-[0px_4px_10px_rgba(27,67,50,0.08)]">
-              <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ backgroundColor: item.bg }}>
-                <div className="w-6 h-6 bg-[#1b4332] opacity-40 rounded" />
-              </div>
-              <h3 className="font-semibold text-[#1a1c18] text-xl">{item.step}</h3>
-              <p className="text-[#414844] text-base text-center leading-6">{item.desc}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
       {/* Marketplace + Repair Verdict Bento */}
-      <section className="max-w-[1280px] mx-auto px-6 pb-24">
+      <section className="max-w-[1280px] mx-auto px-6 py-24">
         <div className="grid grid-cols-12 gap-8">
           <div className="col-span-8 flex flex-col gap-4">
             <div className="flex items-center justify-between">
