@@ -13,6 +13,12 @@ interface MarketplaceGridClientProps {
   initialItems: MarketplaceListing[];
 }
 
+type DraftListing = {
+  id: string;
+  title: string;
+  updatedAt: string;
+};
+
 const typeColors: Record<string, string> = {
   laptop: "#1b4332",
   laptops: "#1b4332",
@@ -131,6 +137,7 @@ export default function MarketplaceGridClient({ initialItems }: MarketplaceGridC
   const searchParams = useSearchParams();
   const [userId, setUserId] = useState<string | null>(null);
   const [myListings, setMyListings] = useState<MarketplaceListing[]>([]);
+  const [draftListings, setDraftListings] = useState<DraftListing[]>([]);
   const [query, setQuery] = useState("");
   const [type, setType] = useState("All");
   const [tab, setTab] = useState("All");
@@ -149,12 +156,42 @@ export default function MarketplaceGridClient({ initialItems }: MarketplaceGridC
       supabase.auth.getUser().then(({ data }) => {
         const uid = data.user?.id ?? null;
         setUserId(uid);
-        if (uid) setMyListings(initialItems.filter((it) => it.sellerId === uid));
+        if (uid) {
+          setMyListings(initialItems.filter((it) => it.sellerId === uid));
+          void supabase
+            .from("marketplace_listings")
+            .select("id,title,updated_at")
+            .eq("seller_id", uid)
+            .eq("status", "draft")
+            .order("updated_at", { ascending: false })
+            .limit(5)
+            .then(({ data: drafts, error }) => {
+              if (error) {
+                setDraftListings([]);
+                return;
+              }
+              const rows = (drafts ?? []) as Array<{
+                id: string;
+                title: string | null;
+                updated_at: string;
+              }>;
+              setDraftListings(
+                rows.map((draft) => ({
+                  id: draft.id,
+                  title: draft.title?.trim() || "Untitled draft",
+                  updatedAt: draft.updated_at,
+                }))
+              );
+            });
+        } else {
+          setDraftListings([]);
+        }
       });
     } catch {
       const timer = window.setTimeout(() => {
         setUserId(null);
         setMyListings([]);
+        setDraftListings([]);
       }, 0);
 
       return () => window.clearTimeout(timer);
@@ -569,6 +606,36 @@ export default function MarketplaceGridClient({ initialItems }: MarketplaceGridC
                       Your first listing will show up here.
                     </div>
                   ) : null}
+                </div>
+                <div className="border-t border-[rgba(193,200,194,0.3)] pt-4 flex flex-col gap-3">
+                  <span className="font-semibold text-[#414844] text-xs tracking-[0.6px]">
+                    Draft Listings
+                  </span>
+                  {draftListings.length > 0 ? (
+                    draftListings.map((draft) => (
+                      <Link
+                        key={draft.id}
+                        href={`/marketplace/${draft.id}/edit`}
+                        className="bg-white border border-[rgba(193,200,194,0.3)] rounded-lg p-3 flex items-center justify-between gap-3 text-left hover:bg-[#f3f4ec] transition-colors"
+                      >
+                        <div className="min-w-0">
+                          <p className="font-semibold text-[#1a1c18] text-sm leading-5 truncate">
+                            {draft.title}
+                          </p>
+                          <p className="text-[#717973] text-[11px] mt-0.5">
+                            Draft
+                          </p>
+                        </div>
+                        <span className="text-[#717973] text-xs shrink-0">
+                          Edit
+                        </span>
+                      </Link>
+                    ))
+                  ) : (
+                    <div className="bg-white border border-[rgba(193,200,194,0.3)] rounded-lg p-3 text-[#717973] text-sm">
+                      No drafts yet.
+                    </div>
+                  )}
                 </div>
                 <Link
                   href="/create-listing"
