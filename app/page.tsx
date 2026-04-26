@@ -198,7 +198,7 @@ export default function SignInPage() {
                   <div className="flex items-center justify-between">
                     <label className="text-[#1a1c18] text-xs font-semibold tracking-[0.4px]">Password</label>
                     {mode === "signin" && (
-                      <a href="#" className="text-[#1b4332] text-xs font-semibold hover:underline">Forgot password?</a>
+                      <Link href="/auth/forgot" className="text-[#1b4332] text-xs font-semibold hover:underline">Forgot password?</Link>
                     )}
                   </div>
                   <input
