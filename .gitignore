@@ -20,6 +20,9 @@
 # production
 /build
 
+# legacy nested project wrapper; repo root is canonical
+/bronco-repair-desk/
+
 # misc
 .DS_Store
 *.pem

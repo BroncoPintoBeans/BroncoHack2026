@@ -1,0 +1,45 @@
+import type { CaseRecord } from '../../lib/types'
+
+export const DEMO_CASES: CaseRecord[] = [
+  {
+    id: 'case-84920',
+    userId: 'demo-user-00000000-0000-0000-0000-000000000000',
+    category: 'laptop',
+    symptoms: 'Screen flickers and goes black after 10 minutes of use. Fan spins loudly.',
+    urgency: 'normal',
+    modelNumber: 'MacBook Pro 2019',
+    status: 'complete',
+    createdAt: '2026-04-25T10:00:00Z',
+    updatedAt: '2026-04-25T10:05:00Z',
+  },
+  {
+    id: 'case-84921',
+    userId: 'demo-user-00000000-0000-0000-0000-000000000000',
+    category: 'bicycle',
+    symptoms: 'Rear derailleur skips under load. Chain slips when pedaling hard.',
+    urgency: 'low',
+    status: 'complete',
+    createdAt: '2026-04-25T09:00:00Z',
+    updatedAt: '2026-04-25T09:08:00Z',
+  },
+  {
+    id: 'case-84922',
+    userId: 'demo-user-00000000-0000-0000-0000-000000000000',
+    category: 'scooter',
+    symptoms: 'Battery drains 3x faster than normal. Gets warm near the battery compartment.',
+    urgency: 'urgent',
+    status: 'awaiting_user',
+    createdAt: '2026-04-25T08:00:00Z',
+    updatedAt: '2026-04-25T08:03:00Z',
+  },
+  {
+    id: 'case-84923',
+    userId: 'demo-user-00000000-0000-0000-0000-000000000000',
+    category: 'mini_fridge',
+    symptoms: 'Not cooling below 50°F. Compressor runs constantly but temperature stays high.',
+    urgency: 'normal',
+    status: 'open',
+    createdAt: '2026-04-25T07:00:00Z',
+    updatedAt: '2026-04-25T07:00:00Z',
+  },
+]
