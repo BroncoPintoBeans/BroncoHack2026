@@ -39,6 +39,7 @@ export type SellerReview = {
 export type SellerOverview = {
   sellerId: string;
   displayName: string;
+  productTitles: string[];
   averageRating: number | null;
   totalReviews: number;
 };
@@ -267,6 +268,7 @@ export async function getSellerOverview(sellerId: string): Promise<SellerOvervie
   return {
     sellerId,
     displayName: seller.displayName,
+    productTitles: seller.productTitles,
     averageRating: reviewSummary.averageRating,
     totalReviews: reviewSummary.totalReviews,
   };
@@ -291,6 +293,7 @@ export async function getSellerProfileData(
   return {
     sellerId,
     displayName: seller.displayName,
+    productTitles: seller.productTitles,
     averageRating: reviewSummary.averageRating,
     totalReviews: reviewSummary.totalReviews,
     activeListings,
