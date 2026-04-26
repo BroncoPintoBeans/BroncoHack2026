@@ -160,29 +160,92 @@ const REVERSE_LOGISTICS_RULES: Record<ReverseLogisticsIntent, ReverseLogisticsRu
 export function normalizeReverseLogisticsIntent(
   input?: ReverseLogisticsRequest | string | null,
 ): ReverseLogisticsIntent {
-  const text = buildIntentText(input)
+  if (typeof input === 'string') {
+    return resolveIntentFromText(input) ?? 'unknown'
+  }
 
-  if (!text) {
+  if (!input) {
     return 'unknown'
   }
 
-  if (matchesAny(text, ['meetup', 'meet up', 'exchange', 'handoff', 'pickup', 'pick up'])) {
+  const explicitIntent = normalizeText(input.intent)
+
+  if (explicitIntent) {
+    const resolvedIntent = resolveIntentFromText(explicitIntent)
+
+    if (resolvedIntent) {
+      return resolvedIntent
+    }
+  }
+
+  return (
+    resolveIntentFromText([input.category, input.itemCategory].join(' ')) ??
+    'unknown'
+  )
+}
+
+function resolveIntentFromText(text: string | null | undefined): ReverseLogisticsIntent | null {
+  const normalizedText = normalizeText(text)
+
+  if (!normalizedText) {
+    return null
+  }
+
+  if (
+    matchesAny(normalizedText, [
+      'meetup',
+      'meet up',
+      'exchange',
+      'handoff',
+      'pickup',
+      'pick up',
+    ])
+  ) {
     return 'public-exchange'
   }
 
-  if (matchesAny(text, ['part', 'parts', 'accessory', 'accessories', 'adapter', 'charger'])) {
+  if (
+    matchesAny(normalizedText, [
+      'part',
+      'parts',
+      'accessory',
+      'accessories',
+      'adapter',
+      'charger',
+    ])
+  ) {
     return 'parts'
   }
 
-  if (matchesAny(text, ['reuse', 'repurpose', 'donate', 'upcycle', 'rehome'])) {
+  if (
+    matchesAny(normalizedText, [
+      'reuse',
+      'repurpose',
+      'donate',
+      'donation',
+      'upcycle',
+      'rehome',
+    ])
+  ) {
     return 'reuse'
   }
 
-  if (matchesAny(text, ['repair', 'fix', 'broken', 'troubleshoot', 'diagnose', 'service'])) {
+  if (
+    matchesAny(normalizedText, [
+      'repair',
+      'repairs',
+      'fix',
+      'fixed',
+      'broken',
+      'troubleshoot',
+      'diagnose',
+      'service',
+    ])
+  ) {
     return 'repair'
   }
 
-  return 'unknown'
+  return null
 }
 
 export function recommendReverseLogisticsDestination(
@@ -211,24 +274,32 @@ export function getReverseLogisticsDestinationsForIntent(
   return [rule.primary, ...rule.alternatives]
 }
 
-function buildIntentText(input?: ReverseLogisticsRequest | string | null): string {
-  if (typeof input === 'string') {
-    return normalizeText(input)
-  }
-
-  if (!input) {
-    return ''
-  }
-
-  return normalizeText([input.intent, input.category, input.itemCategory].join(' '))
-}
-
-function normalizeText(text: string): string {
-  return text.trim().toLowerCase()
+function normalizeText(text: string | null | undefined): string {
+  return text?.trim().toLowerCase() ?? ''
 }
 
 function matchesAny(text: string, tokens: readonly string[]): boolean {
-  return tokens.some((token) => text.includes(token))
+  return tokens.some((token) => matchesTerm(text, token))
+}
+
+function matchesTerm(text: string, token: string): boolean {
+  const tokenPattern = token
+    .trim()
+    .split(/\s+/)
+    .map(escapeRegExp)
+    .join('[^a-z0-9]+')
+
+  if (!tokenPattern) {
+    return false
+  }
+
+  return new RegExp(`(^|[^a-z0-9])${tokenPattern}([^a-z0-9]|$)`, 'i').test(
+    text,
+  )
+}
+
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
 function buildDestinationOption(

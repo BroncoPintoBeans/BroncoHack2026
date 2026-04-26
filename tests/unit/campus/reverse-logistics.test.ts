@@ -65,6 +65,64 @@ describe('reverse logistics campus routing', () => {
     expect(recommendation.alternatives).toEqual([])
   })
 
+  it('honors explicit structured intent before conflicting category text', () => {
+    const repairRecommendation = recommendReverseLogisticsDestination({
+      intent: 'repair',
+      itemCategory: 'phone charger',
+    })
+    const reuseRecommendation = recommendReverseLogisticsDestination({
+      intent: 'reuse',
+      category: 'replacement parts',
+    })
+
+    expect(repairRecommendation.primary.locationId).toBe(
+      'ilab-building-1-room-113',
+    )
+    expect(
+      repairRecommendation.alternatives.map(
+        (destination) => destination.locationId,
+      ),
+    ).toContain('bronco-bookstore-tech-building-66')
+    expect(reuseRecommendation.primary.locationId).toBe(
+      'ilab-building-1-room-113',
+    )
+    expect(destinationIdsFor({ intent: 'reuse', category: 'replacement parts' })).toEqual(
+      REVERSE_LOGISTICS_REUSE_DESTINATIONS,
+    )
+  })
+
+  it('falls back to category scanning when structured intent is absent or unknown', () => {
+    expect(
+      recommendReverseLogisticsDestination({
+        intent: 'not sure yet',
+        category: 'phone charger',
+      }).primary.locationId,
+    ).toBe('bronco-bookstore-tech-building-66')
+    expect(
+      recommendReverseLogisticsDestination({
+        category: 'broken laptop',
+      }).primary.locationId,
+    ).toBe('ilab-building-1-room-113')
+  })
+
+  it('does not match routing terms inside incidental substrings', () => {
+    const apartmentRecommendation = recommendReverseLogisticsDestination({
+      category: 'apartment fixture',
+    })
+    const departmentRecommendation = recommendReverseLogisticsDestination({
+      itemCategory: 'department surplus',
+    })
+
+    expect(apartmentRecommendation.primary.locationId).toBe(
+      'marketplace-exchange-public-meetup',
+    )
+    expect(apartmentRecommendation.confidence).toBe('low')
+    expect(departmentRecommendation.primary.locationId).toBe(
+      'marketplace-exchange-public-meetup',
+    )
+    expect(departmentRecommendation.confidence).toBe('low')
+  })
+
   it('returns the public marketplace meetup location for exchange coordination', () => {
     const recommendation = recommendReverseLogisticsDestination('public exchange meetup')
 
