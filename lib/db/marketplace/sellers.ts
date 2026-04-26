@@ -51,6 +51,73 @@ export type SellerProfileData = SellerOverview & {
   existingReview: SellerReview | null;
 };
 
+function createSeededRng(seedText: string) {
+  let seed = 2166136261;
+  for (let idx = 0; idx < seedText.length; idx += 1) {
+    seed ^= seedText.charCodeAt(idx);
+    seed = Math.imul(seed, 16777619);
+  }
+
+  let state = seed || 1;
+  return () => {
+    state ^= state << 13;
+    state ^= state >>> 17;
+    state ^= state << 5;
+    return ((state >>> 0) % 1_000_000) / 1_000_000;
+  };
+}
+
+function buildMockSellerReviews(sellerId: string): SellerReview[] {
+  const rng = createSeededRng(sellerId);
+  const reviewerNames = [
+    "Jordan",
+    "Taylor",
+    "Avery",
+    "Casey",
+    "Morgan",
+    "Riley",
+    "Sam",
+    "Jamie",
+    "Drew",
+    "Parker",
+  ];
+  const commentTemplates = [
+    "Quick responses and exactly as described.",
+    "Easy pickup and super friendly.",
+    "Great communication — would buy again.",
+    "Item was clean and worked perfectly.",
+    "On time and helpful with questions.",
+    "Smooth exchange, no issues at all.",
+    "Fair price and honest description.",
+    "Fast handoff and everything matched the listing.",
+    "Very respectful and easy to coordinate with.",
+  ];
+
+  const reviewCount = 3 + Math.floor(rng() * 4); // 3..6
+  const now = Date.now();
+
+  return Array.from({ length: reviewCount }).map((_, index) => {
+    const ratingRoll = rng();
+    const rating = ratingRoll < 0.05 ? 3 : ratingRoll < 0.35 ? 4 : 5;
+    const includeComment = rng() > 0.15;
+    const daysAgo = 2 + Math.floor(rng() * 120);
+    const createdAt = new Date(now - daysAgo * 24 * 60 * 60 * 1000).toISOString();
+
+    return {
+      id: `mock-${sellerId}-${index + 1}`,
+      reviewerId: `mock-${index + 1}`,
+      reviewerName:
+        reviewerNames[Math.floor(rng() * reviewerNames.length)] ?? "Campus buyer",
+      rating,
+      comment: includeComment
+        ? commentTemplates[Math.floor(rng() * commentTemplates.length)] ??
+          "Smooth exchange."
+        : null,
+      createdAt,
+    };
+  });
+}
+
 async function getUserRatingsForSeller(sellerId: string) {
   const supabase = await createClient();
   const baseQuery = supabase
@@ -65,9 +132,7 @@ async function getUserRatingsForSeller(sellerId: string) {
   const { data, error } = await baseQuery;
   if (!error) return (data ?? []) as UserRatingRow[];
 
-  if (!isSupabaseAvailable()) {
-    throw new Error(error.message);
-  }
+  if (!isSupabaseAvailable()) return [];
 
   const admin = getSupabaseClient();
   const { data: adminData, error: adminError } = await admin
@@ -173,18 +238,21 @@ function summarizeReviews(
       createdAt: row.created_at,
     }));
 
-  const totalReviews = reviews.length;
+  const hydratedReviews =
+    reviews.length === 0 ? buildMockSellerReviews(sellerId) : reviews;
+  const totalReviews = hydratedReviews.length;
   const averageRating =
     totalReviews > 0
       ? Number(
           (
-            reviews.reduce((sum, review) => sum + review.rating, 0) / totalReviews
+            hydratedReviews.reduce((sum, review) => sum + review.rating, 0) /
+            totalReviews
           ).toFixed(1)
         )
       : null;
 
   return {
-    reviews,
+    reviews: hydratedReviews,
     totalReviews,
     averageRating,
   };

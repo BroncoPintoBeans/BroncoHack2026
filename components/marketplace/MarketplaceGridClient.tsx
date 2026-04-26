@@ -171,6 +171,36 @@ export default function MarketplaceGridClient({ initialItems }: MarketplaceGridC
     [initialItems]
   );
 
+  const sellerMatches = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+    if (!normalizedQuery) return [];
+
+    const bySeller = new Map<
+      string,
+      { sellerId: string; sellerName: string; listingTitles: string[]; listingCount: number }
+    >();
+
+    for (const item of initialItems) {
+      const sellerName = item.sellerName?.trim();
+      if (!sellerName) continue;
+      if (!sellerName.toLowerCase().includes(normalizedQuery)) continue;
+
+      const existing =
+        bySeller.get(item.sellerId) ??
+        { sellerId: item.sellerId, sellerName, listingTitles: [], listingCount: 0 };
+      existing.listingCount += 1;
+      if (item.title) existing.listingTitles.push(item.title);
+      bySeller.set(item.sellerId, existing);
+    }
+
+    return [...bySeller.values()]
+      .map((seller) => ({
+        ...seller,
+        listingTitles: [...new Set(seller.listingTitles)].slice(0, 3),
+      }))
+      .sort((a, b) => b.listingCount - a.listingCount || a.sellerName.localeCompare(b.sellerName));
+  }, [initialItems, query]);
+
   const filtered = useMemo(() => {
     let out = [...initialItems];
     const normalizedQuery = query.trim().toLowerCase();
@@ -184,6 +214,7 @@ export default function MarketplaceGridClient({ initialItems }: MarketplaceGridC
           item.condition ?? "",
           item.pickupLocation,
           item.tradeRequest ?? "",
+          item.sellerName ?? "",
         ].some((value) => value.toLowerCase().includes(normalizedQuery))
       );
     }
@@ -258,7 +289,7 @@ export default function MarketplaceGridClient({ initialItems }: MarketplaceGridC
               <input
                 aria-label="Search"
                 className="bg-white border border-[#c1c8c2] rounded-full px-4 py-2.5 text-sm text-[#1a1c18] w-full sm:w-64 outline-none focus:border-[#1b4332]"
-                placeholder="Search marketplace..."
+                placeholder="Search for listings or users"
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
               />
@@ -301,118 +332,156 @@ export default function MarketplaceGridClient({ initialItems }: MarketplaceGridC
                 No marketplace listings match those filters.
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                {filtered.map((item) => {
-                  const categoryKey = formatCategoryKey(item.category);
-                  const saved = wishlist.includes(item.id);
-
-                  return (
-                    <div key={item.id} className="relative">
-                      <div
-                        role="button"
-                        tabIndex={0}
-                        onClick={() => router.push(`/marketplace/${item.id}`)}
-                        onKeyDown={(event) => {
-                          if (event.key === "Enter") router.push(`/marketplace/${item.id}`);
-                        }}
-                        className="bg-white border border-[rgba(193,200,194,0.3)] rounded-xl overflow-hidden shadow-[0px_4px_12px_0px_rgba(27,67,50,0.04)] hover:shadow-[0px_8px_24px_0px_rgba(27,67,50,0.1)] transition-shadow flex flex-col cursor-pointer min-h-full"
-                      >
-                        <div className="h-48 bg-[#e2e3db] relative overflow-hidden">
-                          {item.imageUrl ? (
-                            <img src={item.imageUrl} alt={item.title} className="w-full h-full object-cover" />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-[#717973] text-sm">
-                              No photo
+              <div className="flex flex-col gap-6">
+                {query.trim() && sellerMatches.length > 0 ? (
+                  <section className="bg-white border border-[#e2e3db] rounded-xl p-5">
+                    <p className="text-xs font-semibold tracking-[0.6px] text-[#717973] uppercase">
+                      Sellers
+                    </p>
+                    <div className="mt-3 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                      {sellerMatches.map((seller) => (
+                        <Link
+                          key={seller.sellerId}
+                          href={`/sellers/${seller.sellerId}`}
+                          className="rounded-xl border border-[#e2e3db] bg-[#f9faf2] p-4 hover:bg-[#f3f4ec] transition-colors"
+                        >
+                          <div className="flex items-start gap-3">
+                            <div className="h-10 w-10 shrink-0 rounded-full bg-[#1b4332] text-white flex items-center justify-center font-semibold">
+                              {seller.sellerName[0]?.toUpperCase() ?? "S"}
                             </div>
-                          )}
-                          <span className="absolute top-3 left-3 backdrop-blur-sm bg-white/90 text-[#012d1d] text-[10px] font-bold tracking-[1px] px-2 py-1 rounded">
-                            Recirculated
-                          </span>
-                          <button
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              toggleWishlist(item.id);
-                            }}
-                            aria-label={saved ? "Remove from wishlist" : "Save to wishlist"}
-                            title={saved ? "Saved" : "Save"}
-                            className={`absolute top-3 right-3 rounded-full p-2 transition-colors ${
-                              saved ? "bg-[#1b4332] text-white border-[#1b4332]" : "bg-white text-[#1b4332] border border-[#c1c8c2]"
-                            }`}
-                          >
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                              <path d="M6 2h12v19l-6-4-6 4V2z" fill="currentColor" />
-                            </svg>
-                          </button>
-                          <span
-                            className="absolute top-3 right-14 text-xs font-semibold tracking-[0.6px] px-2 py-1 rounded"
-                            style={{ background: conditionColor(item).bg, color: conditionColor(item).text }}
-                          >
-                            {item.condition ?? formatListingType(item)}
-                          </span>
-                        </div>
-                          <div className="p-4 flex flex-col flex-1">
-                          <div className="flex items-start justify-between gap-3 mb-2">
-                            <div className="flex-1 min-w-0">
-                              <h3 className="font-semibold text-[#1a1c18] text-xl leading-7" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                                {item.title}
-                              </h3>
-                              {item.listingType === 'trade' ? (
-                                <div className="mt-2 inline-block border border-[#e2e3db] text-[#414844] text-sm px-3 py-1 rounded">
-                                  {item.tradeRequest ? `Trade for ${item.tradeRequest}` : 'Trade'}
-                                </div>
+                            <div className="min-w-0">
+                              <p className="font-semibold text-[#1a1c18] text-sm whitespace-normal break-words">
+                                {seller.sellerName}
+                              </p>
+                              <p className="mt-1 text-xs text-[#717973]">
+                                {seller.listingCount}{" "}
+                                {seller.listingCount === 1 ? "listing" : "listings"}
+                              </p>
+                              {seller.listingTitles.length > 0 ? (
+                                <p className="mt-2 text-xs text-[#414844]">
+                                  {seller.listingTitles.join(" • ")}
+                                  {seller.listingCount > seller.listingTitles.length ? " • …" : ""}
+                                </p>
                               ) : null}
                             </div>
-                            {item.listingType === 'trade' ? null : (
-                              <span
-                                className="font-semibold text-2xl leading-8 whitespace-nowrap"
-                                style={{ color: typeColors[categoryKey] || typeColors.default }}
-                              >
-                                {formatPrice(item)}
-                              </span>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  </section>
+                ) : null}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                  {filtered.map((item) => {
+                    const categoryKey = formatCategoryKey(item.category);
+                    const saved = wishlist.includes(item.id);
+
+                    return (
+                      <div key={item.id} className="relative">
+                        <div
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => router.push(`/marketplace/${item.id}`)}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter") router.push(`/marketplace/${item.id}`);
+                          }}
+                          className="bg-white border border-[rgba(193,200,194,0.3)] rounded-xl overflow-hidden shadow-[0px_4px_12px_0px_rgba(27,67,50,0.04)] hover:shadow-[0px_8px_24px_0px_rgba(27,67,50,0.1)] transition-shadow flex flex-col cursor-pointer min-h-full"
+                        >
+                          <div className="h-48 bg-[#e2e3db] relative overflow-hidden">
+                            {item.imageUrl ? (
+                              <img src={item.imageUrl} alt={item.title} className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-[#717973] text-sm">
+                                No photo
+                              </div>
                             )}
-                          </div>
-                          <div className="flex flex-wrap gap-2 mb-3">
-                            <span className="text-xs font-semibold tracking-[0.6px] px-2 py-1 rounded" style={{ background: getCategoryColors(item.category).bg, color: getCategoryColors(item.category).text }}>
-                              {item.category}
+                            <span className="absolute top-3 left-3 backdrop-blur-sm bg-white/90 text-[#012d1d] text-[10px] font-bold tracking-[1px] px-2 py-1 rounded">
+                              Recirculated
                             </span>
-                            <span className="bg-[#e8e9e1] text-[#414844] text-xs font-semibold tracking-[0.6px] px-2 py-1 rounded">
-                              {formatListingType(item)}
+                            <button
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                toggleWishlist(item.id);
+                              }}
+                              aria-label={saved ? "Remove from wishlist" : "Save to wishlist"}
+                              title={saved ? "Saved" : "Save"}
+                              className={`absolute top-3 right-3 rounded-full p-2 transition-colors ${
+                                saved ? "bg-[#1b4332] text-white border-[#1b4332]" : "bg-white text-[#1b4332] border border-[#c1c8c2]"
+                              }`}
+                            >
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M6 2h12v19l-6-4-6 4V2z" fill="currentColor" />
+                              </svg>
+                            </button>
+                            <span
+                              className="absolute top-3 right-14 text-xs font-semibold tracking-[0.6px] px-2 py-1 rounded"
+                              style={{ background: conditionColor(item).bg, color: conditionColor(item).text }}
+                            >
+                              {item.condition ?? formatListingType(item)}
                             </span>
                           </div>
-                          <p
-                            className="text-[#414844] text-sm mb-4 flex-1"
-                            style={{
-                              display: "-webkit-box",
-                              WebkitLineClamp: 3,
-                              WebkitBoxOrient: "vertical",
-                              overflow: "hidden",
-                            }}
-                          >
-                            {item.description || "No description provided."}
-                          </p>
-                          <div className="border-t border-[rgba(193,200,194,0.5)] pt-4 flex items-center justify-between gap-3">
-                            <div className="flex items-center gap-3">
-                              <span className="flex items-center gap-2 text-[#414844] text-xs">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
-                                  <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z" fill="#475655" />
-                                </svg>
-                                <span className="font-semibold">{item.pickupLocation || "Campus pickup"}</span>
+                            <div className="p-4 flex flex-col flex-1">
+                            <div className="flex items-start justify-between gap-3 mb-2">
+                              <div className="flex-1 min-w-0">
+                                <h3 className="font-semibold text-[#1a1c18] text-xl leading-7" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                                  {item.title}
+                                </h3>
+                                {item.listingType === 'trade' ? (
+                                  <div className="mt-2 inline-block border border-[#e2e3db] text-[#414844] text-sm px-3 py-1 rounded">
+                                    {item.tradeRequest ? `Trade for ${item.tradeRequest}` : 'Trade'}
+                                  </div>
+                                ) : null}
+                              </div>
+                              {item.listingType === 'trade' ? null : (
+                                <span
+                                  className="font-semibold text-2xl leading-8 whitespace-nowrap"
+                                  style={{ color: typeColors[categoryKey] || typeColors.default }}
+                                >
+                                  {formatPrice(item)}
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex flex-wrap gap-2 mb-3">
+                              <span className="text-xs font-semibold tracking-[0.6px] px-2 py-1 rounded" style={{ background: getCategoryColors(item.category).bg, color: getCategoryColors(item.category).text }}>
+                                {item.category}
+                              </span>
+                              <span className="bg-[#e8e9e1] text-[#414844] text-xs font-semibold tracking-[0.6px] px-2 py-1 rounded">
+                                {formatListingType(item)}
                               </span>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <EcoSprout item={item} />
-                              <span className="font-semibold text-[#012d1d] text-xs tracking-[0.6px]">
-                                {computeEcoTokens(item)}
-                              </span>
+                            <p
+                              className="text-[#414844] text-sm mb-4 flex-1"
+                              style={{
+                                display: "-webkit-box",
+                                WebkitLineClamp: 3,
+                                WebkitBoxOrient: "vertical",
+                                overflow: "hidden",
+                              }}
+                            >
+                              {item.description || "No description provided."}
+                            </p>
+                            <div className="border-t border-[rgba(193,200,194,0.5)] pt-4 flex items-center justify-between gap-3">
+                              <div className="flex items-center gap-3">
+                                <span className="flex items-center gap-2 text-[#414844] text-xs">
+                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+                                    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z" fill="#475655" />
+                                  </svg>
+                                  <span className="font-semibold">{item.pickupLocation || "Campus pickup"}</span>
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <EcoSprout item={item} />
+                                <span className="font-semibold text-[#012d1d] text-xs tracking-[0.6px]">
+                                  {computeEcoTokens(item)}
+                                </span>
+                              </div>
                             </div>
                           </div>
                         </div>
                       </div>
-
-                      
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
             )}
 

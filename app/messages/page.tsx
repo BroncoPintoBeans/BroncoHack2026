@@ -2,9 +2,11 @@ import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import MessagesSeenTracker from "./MessagesSeenTracker";
+import DeleteConversationButton from "./DeleteConversationButton";
 import BackButton from "@/components/BackButton";
 import Navbar from "@/components/Navbar";
 import {
+  deleteMarketplaceConversation,
   getMarketplaceConversationReplyRecipient,
   listMarketplaceConversations,
   listMarketplaceMessages,
@@ -73,6 +75,20 @@ async function sendMarketplaceMessage(formData: FormData) {
   revalidatePath("/messages");
 }
 
+async function deleteConversation(formData: FormData) {
+  "use server";
+
+  const user = await getUser();
+  if (!user) return;
+
+  const conversationId = String(formData.get("conversationId") ?? "").trim();
+  if (!conversationId) return;
+
+  await deleteMarketplaceConversation(conversationId, user.id);
+  revalidatePath("/messages");
+  redirect("/messages");
+}
+
 export default async function MessagesPage({
   searchParams,
 }: {
@@ -122,6 +138,7 @@ export default async function MessagesPage({
   const headerInitial = draftListing ? draftRecipientInitial : activeConversation?.otherUserInitial;
   const headerListingTitle = draftListing ? draftListing.title : activeConversation?.listingTitle;
   const headerListingId = draftListing ? draftListing.id : activeConversation?.listingId;
+  const headerProfileUserId = draftListing ? draftListing.sellerId : activeConversation?.otherUserId;
   const canRenderChat = Boolean(activeConversation || draftListing);
 
   return (
@@ -144,25 +161,53 @@ export default async function MessagesPage({
             </div>
             <div className="overflow-y-auto flex-1">
               {conversationsWithMessages.map((conversation) => (
-                <Link
+                <div
                   key={conversation.id}
-                  href={`/messages?conversation=${conversation.id}`}
-                  className={`p-4 border-b border-[#e2e3db] flex items-start gap-3 cursor-pointer hover:bg-[#f9faf2] transition-colors ${
-                    activeConversation?.id === conversation.id ? "bg-[#f3f4ec]" : ""
+                  className={`p-4 border-b border-[#e2e3db] flex items-start gap-3 transition-colors ${
+                    activeConversation?.id === conversation.id ? "bg-[#f3f4ec]" : "hover:bg-[#f9faf2]"
                   }`}
                 >
-                  <div className="w-10 h-10 rounded-full bg-[#1b4332] flex items-center justify-center text-white text-sm font-semibold shrink-0">
-                    {conversation.otherUserInitial}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-2 mb-0.5">
-                      <span className="font-semibold text-[#1a1c18] text-sm truncate">{conversation.otherUserName}</span>
-                      <span className="text-[#717973] text-xs shrink-0">{formatChatTime(conversation.lastMessageAt ?? conversation.updatedAt)}</span>
+                  <Link
+                    href={`/messages?conversation=${conversation.id}`}
+                    className="shrink-0"
+                    aria-label={`Open chat with ${conversation.otherUserName}`}
+                  >
+                    <div className="w-10 h-10 rounded-full bg-[#1b4332] flex items-center justify-center text-white text-sm font-semibold shrink-0">
+                      {conversation.otherUserInitial}
                     </div>
-                    <p className="text-[#414844] text-xs mb-0.5 truncate">{conversation.listingTitle}</p>
-                    <p className="text-[#717973] text-xs truncate">{conversation.preview}</p>
+                  </Link>
+
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-3">
+                      <Link
+                        href={`/sellers/${conversation.otherUserId}`}
+                        className="text-sm font-semibold text-[#1a1c18] hover:underline whitespace-normal break-words"
+                        aria-label={`Open ${conversation.otherUserName} profile`}
+                        title={conversation.otherUserName}
+                      >
+                        {conversation.otherUserName}
+                      </Link>
+                    </div>
+
+                    <Link
+                      href={`/messages?conversation=${conversation.id}`}
+                      className="mt-0.5 block min-w-0"
+                      aria-label={`Open chat about ${conversation.listingTitle}`}
+                    >
+                      <p className="text-[#414844] text-xs mb-0.5 truncate">{conversation.listingTitle}</p>
+                      <p className="text-[#717973] text-xs truncate">{conversation.preview}</p>
+                    </Link>
+
+                    <p className="mt-1 text-[#717973] text-xs">
+                      {formatChatTime(conversation.lastMessageAt ?? conversation.updatedAt)}
+                    </p>
                   </div>
-                </Link>
+                  <DeleteConversationButton
+                    conversationId={conversation.id}
+                    conversationName={conversation.otherUserName}
+                    action={deleteConversation}
+                  />
+                </div>
               ))}
             </div>
           </div>
@@ -197,11 +242,19 @@ export default async function MessagesPage({
                     {isDirectChat ? (
                       <BackButton fallbackHref="/marketplace" label="Back" className="mr-2" />
                     ) : null}
-                    <div className="w-10 h-10 rounded-full bg-[#1b4332] flex items-center justify-center text-white text-sm font-semibold">{headerInitial}</div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-[#1a1c18] text-base">{headerName}</p>
-                      <p className="text-[#717973] text-xs">Re: {headerListingTitle}</p>
-                    </div>
+                    <Link
+                      href={headerProfileUserId ? `/sellers/${headerProfileUserId}` : "/marketplace"}
+                      className="flex items-center gap-3 min-w-0 hover:opacity-90 transition-opacity"
+                    >
+                      <div className="w-10 h-10 rounded-full bg-[#1b4332] flex items-center justify-center text-white text-sm font-semibold">
+                        {headerInitial}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-semibold text-[#1a1c18] text-base truncate">{headerName}</p>
+                        <p className="text-[#717973] text-xs truncate">Re: {headerListingTitle}</p>
+                      </div>
+                    </Link>
+                    <div className="flex-1" />
                     {headerListingId ? (
                       <Link
                         href={`/marketplace/${headerListingId}`}
@@ -209,6 +262,23 @@ export default async function MessagesPage({
                       >
                         View listing
                         <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2.5 9.5l7-7M9.5 9.5V2.5H2.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                      </Link>
+                    ) : null}
+                    {headerProfileUserId ? (
+                      <Link
+                        href={`/sellers/${headerProfileUserId}`}
+                        className="shrink-0 flex items-center gap-1.5 text-xs font-semibold text-[#1b4332] border border-[#1b4332] rounded-lg px-3 py-1.5 hover:bg-[#1b4332] hover:text-white transition-colors"
+                      >
+                        View profile
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                          <path
+                            d="M6 6.25a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM2.5 10.5a3.5 3.5 0 0 1 7 0"
+                            stroke="currentColor"
+                            strokeWidth="1.2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
                       </Link>
                     ) : null}
                   </div>
