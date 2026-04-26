@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { getSupabaseClient, isSupabaseAvailable } from "@/lib/db/client";
 import { getUserDisplayNames } from "./seller-profiles";
 
 export interface MarketplaceConversationSummary {
@@ -186,4 +187,37 @@ export async function getMarketplaceConversationReplyRecipient(conversationId: s
   if (!data?.receiver_id) return null;
 
   return data.sender_id === userId ? data.receiver_id : data.sender_id;
+}
+
+export async function deleteMarketplaceConversation(conversationId: string, userId: string) {
+  const supabase = await createClient();
+  const { data: participantRow, error: participantError } = await supabase
+    .from("messages")
+    .select("id")
+    .eq("conversation_id", conversationId)
+    .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
+    .limit(1)
+    .maybeSingle();
+
+  if (participantError) throw new Error(participantError.message);
+  if (!participantRow) {
+    throw Object.assign(new Error("conversation not found"), { status: 404 });
+  }
+
+  const writer = isSupabaseAvailable() ? getSupabaseClient() : supabase;
+
+  const { error: messagesError } = await writer
+    .from("messages")
+    .delete()
+    .eq("conversation_id", conversationId)
+    .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`);
+  if (messagesError) throw new Error(messagesError.message);
+
+  const { error: conversationError } = await writer
+    .from("conversations")
+    .delete()
+    .eq("id", conversationId);
+  if (conversationError) throw new Error(conversationError.message);
+
+  return { ok: true as const };
 }
