@@ -113,11 +113,6 @@ npm run dev
 
 The Figma-sourced images are hosted on Figma's CDN with a 7-day expiry from Apr 25, 2026. After expiry, images will 404. Replace them with local assets or re-export from Figma (file key: `Q1U2pgxm0XqISBmUpGRe1g`).
 
-## Figma Source
-
-File key: `Q1U2pgxm0XqISBmUpGRe1g`
-
-Contains 10 screens: Landing Page, Agent Consultation Workspace, Campus Marketplace, Item Listing Detail (mobile), Messaging System, Rewards & Impact Dashboard, Repair Student Dashboard, Repair Case Detail & Verdict Report, Create Listing (Desktop), Create Listing (Mobile).
 
 ## Gamification System
 
@@ -140,3 +135,5 @@ Achievement badges unlock at milestones: First Item Recirculated, 5 Items Traded
 ## Contributing
 
 This is a hackathon prototype built at BroncoHack 2026 (Cal Poly Pomona). It is a UI prototype — backend integrations (Supabase, Gemini) are planned but not yet wired.
+
+Contributors: Danny Tran, Natalie Mamikonyan, Jessica Pinto, Chau Nguyen. 

@@ -32,12 +32,6 @@ type CaseRow = {
   created_at: string;
 };
 
-type CaseMediaRow = {
-  case_id: string;
-  storage_path: string;
-  media_type: string;
-};
-
 type MarketplaceSummaryRow = {
   category: string;
 };
@@ -195,7 +189,6 @@ async function getCasePreview() {
   if (!user) {
     return {
       cases: [],
-      mediaByCaseId: new Map<string, string>(),
     };
   }
 
@@ -211,40 +204,16 @@ async function getCasePreview() {
     console.error("Landing repair cases failed:", casesError);
     return {
       cases: [],
-      mediaByCaseId: new Map<string, string>(),
     };
   }
 
-  const caseRows = (cases ?? []) as CaseRow[];
-  const caseIds = caseRows.map((repairCase) => repairCase.id);
-  const mediaByCaseId = new Map<string, string>();
-
-  if (caseIds.length > 0) {
-    const { data: media, error: mediaError } = await supabase
-      .from("case_media")
-      .select("case_id,storage_path,media_type")
-      .in("case_id", caseIds)
-      .eq("media_type", "image")
-      .order("created_at", { ascending: true });
-
-    if (mediaError) {
-      console.error("Landing repair case media failed:", mediaError);
-    } else {
-      ((media ?? []) as CaseMediaRow[]).forEach((item) => {
-        if (mediaByCaseId.has(item.case_id)) return;
-        const { data } = supabase.storage.from("case-media").getPublicUrl(item.storage_path);
-        mediaByCaseId.set(item.case_id, data.publicUrl);
-      });
-    }
-  }
-
-  return { cases: caseRows, mediaByCaseId };
+  return { cases: (cases ?? []) as CaseRow[] };
 }
 
 export default async function HomePage() {
   const [
     { listings, mediaByListingId, categories },
-    { cases, mediaByCaseId },
+    { cases },
   ] = await Promise.all([getMarketplacePreview(), getCasePreview()]);
 
   return (
@@ -377,20 +346,14 @@ export default async function HomePage() {
             {cases.length > 0 ? (
               <div className="bg-white rounded-xl p-4 shadow-[0px_4px_10px_rgba(27,67,50,0.08)] min-h-[404px] max-h-140 overflow-y-auto flex flex-col gap-4">
                 {cases.map((repairCase) => {
-                  const caseImage = mediaByCaseId.get(repairCase.id);
-
                   return (
                     <Link
                       key={repairCase.id}
                       href={`/repair/${repairCase.id}`}
                       className="border border-[rgba(193,200,194,0.5)] rounded-xl p-4 flex items-center gap-4 hover:bg-[#f8f9f1] transition-colors"
                     >
-                      <div className="w-20 h-20 rounded-xl bg-[#e8e9e1] overflow-hidden shrink-0 flex items-center justify-center">
-                        {caseImage ? (
-                          <img src={caseImage} alt={repairCase.title ?? "Repair case"} className="w-full h-full object-cover" />
-                        ) : (
-                          <RepairIcon size={36} />
-                        )}
+                      <div className="w-20 h-20 rounded-xl bg-[#e8e9e1] shrink-0 flex items-center justify-center">
+                        <RepairIcon size={36} />
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 mb-1.5">

@@ -1,10 +1,10 @@
 "use client";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef } from "react";
 import { useCaseRun } from "@/hooks/useCaseRun";
 import { useFollowUp } from "@/hooks/useFollowUp";
-import { ApiError, getPublishedHelperRequest, publishHelperRequest, startRun } from "@/lib/api/client";
+import { startRun } from "@/lib/api/client";
 import { BroncoAssistant } from "@/components/BroncoAssistant";
 import Navbar from "@/components/Navbar";
 import type { CaseEventRecord } from "@/lib/types/case";
@@ -162,7 +162,7 @@ function RepairGuidePage() {
             href="/repair/new"
             className="bg-[#1b4332] text-white text-sm font-semibold tracking-[0.6px] px-6 py-3 rounded-lg hover:bg-[#012d1d] transition-colors"
           >
-            Generate Report
+            + New Repair Case
           </Link>
         </section>
       </main>
@@ -188,16 +188,7 @@ function RepairWorkspaceContent({ id }: { id: string }) {
   const report = snapshot?.report;
   const reportVerdict = report?.reportJson.verdict ?? snapshot?.verdict;
   const reportActionPlan = report?.reportJson.actionPlan ?? snapshot?.actionPlan;
-  const boardSummary = report?.boardSummaryJson;
   const caseImageUrl = snapshot?.media.find((item) => item.mediaType === "image" && item.url)?.url ?? macbookImg;
-  const [publishTitle, setPublishTitle] = useState<string | null>(null);
-  const [publishSummary, setPublishSummary] = useState<string | null>(null);
-  const [publishCampusArea, setPublishCampusArea] = useState("");
-  const [publishPreferredTime, setPublishPreferredTime] = useState("");
-  const [publishSkillTags, setPublishSkillTags] = useState<string | null>(null);
-  const [publishState, setPublishState] = useState<"idle" | "submitting" | "published">("idle");
-  const [publishError, setPublishError] = useState<ApiError | null>(null);
-  const [publishedRequestId, setPublishedRequestId] = useState<string | null>(null);
   const runStatus = snapshot?.currentRun?.status;
   const isComplete = runStatus === "complete";
   const isAwaitingUser = runStatus === "awaiting_user";
@@ -216,55 +207,6 @@ function RepairWorkspaceContent({ id }: { id: string }) {
       });
     }
   }, [snapshot, id]);
-
-  useEffect(() => {
-    if (!isComplete || !snapshot) return;
-    let cancelled = false;
-
-    getPublishedHelperRequest(snapshot.case.id)
-      .then((result) => {
-        if (cancelled || !result.helper_request) return;
-        setPublishedRequestId(result.helper_request.id);
-        setPublishState("published");
-      })
-      .catch(() => {
-        // Publishing is optional, so a read-back miss should not block the verdict page.
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [isComplete, snapshot]);
-
-  async function handlePublish(e: FormEvent) {
-    e.preventDefault();
-    if (!report || !snapshot) return;
-    setPublishState("submitting");
-    setPublishError(null);
-    try {
-      const title = publishTitle ?? boardSummary?.title ?? "";
-      const publicSummary = publishSummary ?? boardSummary?.publicSummary ?? "";
-      const rawSkillTags = publishSkillTags ?? boardSummary?.skillTags.join(", ") ?? "";
-      const skillTags = rawSkillTags
-        .split(",")
-        .map((tag) => tag.trim())
-        .filter(Boolean)
-        .slice(0, 10);
-      const result = await publishHelperRequest(snapshot.case.id, {
-        report_id: report.id,
-        title: title.trim() || boardSummary?.title,
-        public_summary: publicSummary.trim() || boardSummary?.publicSummary,
-        campus_area: publishCampusArea.trim() || undefined,
-        preferred_time: publishPreferredTime.trim() || undefined,
-        skill_tags: skillTags.length ? skillTags : boardSummary?.skillTags,
-      });
-      setPublishedRequestId(result.helper_request.id);
-      setPublishState("published");
-    } catch (err) {
-      setPublishError(err instanceof ApiError ? err : new ApiError("Failed to publish helper request", 500));
-      setPublishState("idle");
-    }
-  }
 
   const intakeComplete = getPhaseStatus("intake", events) === "COMPLETE";
   const steps = [
@@ -548,80 +490,6 @@ function RepairWorkspaceContent({ id }: { id: string }) {
               )}
             </div>
 
-            {isComplete && report && boardSummary && (
-              <form onSubmit={handlePublish} className="bg-white border border-[#e2e3db] rounded-xl p-6 flex flex-col gap-4 shadow-[0px_4px_10px_rgba(27,67,50,0.04)]">
-                <div className="flex items-center justify-between gap-4">
-                  <h3 className="font-semibold text-[#1a1c18] text-base">Publish to Community</h3>
-                  {publishedRequestId && (
-                    <span className="text-[#1b4332] text-sm font-semibold">
-                      Request published
-                    </span>
-                  )}
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <label className="flex flex-col gap-2 col-span-2">
-                    <span className="text-[#717973] text-xs uppercase tracking-[0.8px]">Title</span>
-                    <input
-                      value={publishTitle ?? boardSummary.title}
-                      onChange={(e) => setPublishTitle(e.target.value)}
-                      maxLength={200}
-                      className="border border-[#c1c8c2] rounded-lg px-3 py-2 text-sm text-[#1a1c18] focus:outline-none focus:border-[#1b4332] bg-white"
-                    />
-                  </label>
-                  <label className="flex flex-col gap-2 col-span-2">
-                    <span className="text-[#717973] text-xs uppercase tracking-[0.8px]">Public Summary</span>
-                    <textarea
-                      value={publishSummary ?? boardSummary.publicSummary}
-                      onChange={(e) => setPublishSummary(e.target.value)}
-                      maxLength={2000}
-                      rows={3}
-                      className="border border-[#c1c8c2] rounded-lg px-3 py-2 text-sm text-[#1a1c18] focus:outline-none focus:border-[#1b4332] bg-white resize-none"
-                    />
-                  </label>
-                  <label className="flex flex-col gap-2">
-                    <span className="text-[#717973] text-xs uppercase tracking-[0.8px]">Campus Area</span>
-                    <input
-                      value={publishCampusArea}
-                      onChange={(e) => setPublishCampusArea(e.target.value)}
-                      maxLength={100}
-                      placeholder="Engineering Meadow"
-                      className="border border-[#c1c8c2] rounded-lg px-3 py-2 text-sm text-[#1a1c18] focus:outline-none focus:border-[#1b4332] bg-white"
-                    />
-                  </label>
-                  <label className="flex flex-col gap-2">
-                    <span className="text-[#717973] text-xs uppercase tracking-[0.8px]">Preferred Time</span>
-                    <input
-                      value={publishPreferredTime}
-                      onChange={(e) => setPublishPreferredTime(e.target.value)}
-                      maxLength={200}
-                      placeholder="Weekday afternoon"
-                      className="border border-[#c1c8c2] rounded-lg px-3 py-2 text-sm text-[#1a1c18] focus:outline-none focus:border-[#1b4332] bg-white"
-                    />
-                  </label>
-                  <label className="flex flex-col gap-2 col-span-2">
-                    <span className="text-[#717973] text-xs uppercase tracking-[0.8px]">Skill Tags</span>
-                    <input
-                      value={publishSkillTags ?? boardSummary.skillTags.join(", ")}
-                      onChange={(e) => setPublishSkillTags(e.target.value)}
-                      maxLength={300}
-                      className="border border-[#c1c8c2] rounded-lg px-3 py-2 text-sm text-[#1a1c18] focus:outline-none focus:border-[#1b4332] bg-white"
-                    />
-                  </label>
-                </div>
-                {publishError && (
-                  <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-red-700 text-sm">
-                    {publishError.message}
-                  </div>
-                )}
-                <button
-                  type="submit"
-                  disabled={publishState === "submitting" || publishState === "published"}
-                  className="self-start bg-[#1b4332] text-white font-semibold text-sm tracking-[0.4px] px-5 py-3 rounded-full hover:bg-[#012d1d] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {publishState === "published" ? "Published" : publishState === "submitting" ? "Publishing..." : "Publish to Community"}
-                </button>
-              </form>
-            )}
           </div>
         </div>
       </div>

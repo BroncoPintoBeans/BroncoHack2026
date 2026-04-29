@@ -76,7 +76,6 @@ export default function MarketplaceDetailClient({
 }: MarketplaceDetailClientProps) {
   const router = useRouter();
   const [index, setIndex] = useState(0);
-  const [saved, setSaved] = useState(false);
   const [messageStatus, setMessageStatus] = useState<"idle" | "opening">("idle");
   const [messageError, setMessageError] = useState("");
   const images = useMemo(
@@ -84,26 +83,6 @@ export default function MarketplaceDetailClient({
     [item.media]
   );
   const selectedImage = images[index] ?? item.imageUrl;
-
-  useEffect(() => {
-    if (isOwner) return;
-
-    const timer = window.setTimeout(() => setSaved(readWishlistIds().includes(item.id)), 0);
-    return () => window.clearTimeout(timer);
-  }, [isOwner, item.id]);
-
-  const toggleSaved = () => {
-    try {
-      const raw = localStorage.getItem("wishlist_ids");
-      const arr: string[] = raw ? JSON.parse(raw) : [];
-      const exists = arr.includes(item.id);
-      const next = exists ? arr.filter((savedId) => savedId !== item.id) : [...arr, item.id];
-      localStorage.setItem("wishlist_ids", JSON.stringify(next));
-      setSaved(!exists);
-    } catch {
-      setSaved((current) => !current);
-    }
-  };
 
   const openSellerConversation = async () => {
     setMessageStatus("opening");
@@ -116,7 +95,7 @@ export default function MarketplaceDetailClient({
       <div className="min-h-screen bg-[#f9faf2]">
         <Navbar />
         <main className="max-w-[980px] mx-auto px-6 py-10">
-          <BackButton fallbackHref="/marketplace" label="Back to Marketplace" className="mb-6" />
+          <BackButton fallbackHref="/marketplace" label="Back" className="mb-6" />
 
           <div className="mb-8">
             <p className="text-[#717973] text-sm font-semibold tracking-[0.6px] uppercase">Listing Manager</p>
@@ -190,7 +169,7 @@ export default function MarketplaceDetailClient({
     <div className="min-h-screen bg-[#f9faf2]">
       <Navbar />
       <div className="max-w-[1280px] mx-auto px-6 py-10">
-        <BackButton fallbackHref="/marketplace" label="Back to Marketplace" className="mb-6" />
+        <BackButton fallbackHref="/marketplace" label="Back" className="mb-6" />
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
           <div className="lg:col-span-7 flex flex-col gap-4">
@@ -309,16 +288,6 @@ export default function MarketplaceDetailClient({
                 {messageStatus === "opening" ? "Opening Chat..." : "Message Seller"}
               </button>
               {messageError ? <p className="text-[#b91c1c] text-xs">{messageError}</p> : null}
-              <button
-                onClick={toggleSaved}
-                className={`border text-sm font-semibold tracking-[0.6px] py-3 rounded-xl transition-colors ${
-                  saved
-                    ? "bg-[#1b4332] text-white"
-                    : "border border-[#e2e3db] text-[#1a1c18] hover:bg-[#f3f4ec]"
-                }`}
-              >
-                {saved ? "Saved to Wishlist" : "Save to Wishlist"}
-              </button>
             </div>
           </div>
         </div>

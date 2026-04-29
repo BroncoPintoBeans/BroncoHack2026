@@ -64,6 +64,15 @@ function statusForRepairCase(item: RepairDashboardCase) {
   };
 }
 
+function RepairIcon({ size = 36 }: { size?: number }) {
+  return (
+    <svg aria-hidden="true" width={size} height={size} viewBox="0 0 36 36" fill="none">
+      <path d="M22.8 8.4a7.2 7.2 0 0 0-7.9 9.8L7.7 25.4a2.9 2.9 0 0 0 4.1 4.1l7.2-7.2a7.2 7.2 0 0 0 9.8-7.9l-4.5 4.5-4.1-1.1-1.1-4.1 4.5-4.5Z" stroke="#1b4332" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M10 27.5h.01" stroke="#1b4332" strokeWidth="2.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export default async function DashboardPage() {
   const user = await getUser();
   const cases = user ? await listRepairDashboardCases() : [];
@@ -108,14 +117,8 @@ export default async function DashboardPage() {
 
             return (
               <Link key={repairCase.id} href={`/repair/${repairCase.id}`} className="bg-white border border-[#e2e3db] rounded-xl p-5 flex items-center gap-6 shadow-[0px_4px_10px_rgba(27,67,50,0.04)] hover:shadow-[0px_8px_20px_rgba(27,67,50,0.08)] transition-shadow">
-                <div className="w-20 h-20 border border-[#e2e3db] rounded-lg overflow-hidden shrink-0 bg-[#e8e9e1] flex items-center justify-center">
-                  {repairCase.imageUrl ? (
-                    <img src={repairCase.imageUrl} alt={titleForRepairCase(repairCase)} className="w-full h-full object-cover" />
-                  ) : (
-                    <span className="text-[#1b4332] text-xs font-bold tracking-[0.6px] uppercase text-center px-2">
-                      {formatCategory(repairCase.category)}
-                    </span>
-                  )}
+                <div className="w-20 h-20 border border-[#e2e3db] rounded-lg shrink-0 bg-[#e8e9e1] flex items-center justify-center">
+                  <RepairIcon size={36} />
                 </div>
                 <div className="flex-1 flex flex-col gap-1">
                   <div className="flex items-center gap-3">

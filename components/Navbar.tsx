@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import {
   MESSAGE_SEEN_EVENT,
   readSeenAtByConversation,
@@ -12,8 +12,7 @@ import type { User } from "@supabase/supabase-js";
 
 const navLinks = [
   { href: "/marketplace", label: "Marketplace" },
-  { href: "/messages", label: "Chats" },
-  { href: "/repair/new", label: "Repair Guide" },
+  { href: "/repair/case-84920", label: "Repair Guide" },
   { href: "/support", label: "Support" },
   { href: "/rewards", label: "Impact" },
 ];
@@ -24,6 +23,53 @@ type MessageStatusRow = {
   receiver_id: string | null;
   created_at: string;
 };
+
+function SavedProductsLink({ isMarketplacePath }: { isMarketplacePath: boolean }) {
+  const searchParams = useSearchParams();
+  const bookmarksActive = isMarketplacePath && searchParams.get("saved") === "1";
+
+  return (
+    <Link
+      href="/marketplace?saved=1"
+      className={`relative flex h-10 w-10 items-center justify-center rounded-full transition-colors ${
+        bookmarksActive ? "bg-[#dce7df] text-[#1b4332]" : "hover:bg-[#e2e3db] text-[#1a1c18]"
+      }`}
+      aria-label="Saved products"
+      title="Saved products"
+    >
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        <path
+          d="M6.667 3.333h6.666a1.667 1.667 0 0 1 1.667 1.667v11.667l-5-2.5-5 2.5V5a1.667 1.667 0 0 1 1.667-1.667Z"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </Link>
+  );
+}
+
+function SavedProductsLinkFallback() {
+  return (
+    <Link
+      href="/marketplace?saved=1"
+      className="relative flex h-10 w-10 items-center justify-center rounded-full text-[#1a1c18] transition-colors hover:bg-[#e2e3db]"
+      aria-label="Saved products"
+      title="Saved products"
+    >
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        <path
+          d="M6.667 3.333h6.666a1.667 1.667 0 0 1 1.667 1.667v11.667l-5-2.5-5 2.5V5a1.667 1.667 0 0 1 1.667-1.667Z"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </Link>
+  );
+}
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -119,6 +165,7 @@ export default function Navbar() {
 
   const displayName = user?.user_metadata?.full_name ?? user?.email?.split("@")[0] ?? null;
   const messagesActive = pathname.startsWith("/messages");
+  const isMarketplacePath = pathname.startsWith("/marketplace");
 
   return (
     <header className="sticky top-0 z-50 bg-[#f8f9f1] border-b border-[#e5e7eb]">
@@ -150,7 +197,9 @@ export default function Navbar() {
           <Link
             href="/messages"
             className={`relative flex h-10 w-10 items-center justify-center rounded-full transition-colors ${
-              messagesActive ? "bg-[#dce7df] text-[#1b4332]" : "hover:bg-[#e2e3db] text-[#1a1c18]"
+              messagesActive
+                ? "bg-[#dce7df] text-[#1b4332]"
+                : "hover:bg-[#e2e3db] text-[#1a1c18]"
             }`}
             aria-label="Messages"
           >
@@ -170,25 +219,19 @@ export default function Navbar() {
               />
             ) : null}
           </Link>
-          <Link
-            href="/repair/new"
-            className="bg-[#1b4332] text-white text-xs font-semibold font-['Work_Sans',sans-serif] tracking-[0.6px] px-4 py-2 rounded-lg hover:bg-[#012d1d] transition-colors"
-          >
-            Start Repair
-          </Link>
+          <Suspense fallback={<SavedProductsLinkFallback />}>
+            <SavedProductsLink isMarketplacePath={isMarketplacePath} />
+          </Suspense>
           {user ? (
             <div className="flex items-center gap-3">
-              <Link
-                href="/dashboard"
-                className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-[#e2e3db] transition-colors"
-              >
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg">
                 <div className="w-7 h-7 bg-[#1b4332] rounded-full flex items-center justify-center">
                   <span className="text-white text-xs font-bold">
                     {displayName?.[0]?.toUpperCase() ?? "U"}
                   </span>
                 </div>
                 <span className="text-[#1a1c18] text-xs font-semibold hidden sm:block">{displayName}</span>
-              </Link>
+              </div>
               <form action={signOut}>
                 <button
                   type="submit"
